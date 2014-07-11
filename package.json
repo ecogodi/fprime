@@ -1,0 +1,15 @@
+{
+  "name": "f",
+  "version": "1.0.0",
+  "description": "An async sequences execution library. It has a very simple core, but is instrumented to easily add more complex flow control features as augmentations.",
+  "author": "Elia Cogodi <elia.cogodi@gmail.com>",
+  "main": "fprime.js",
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "repository": { 
+    "type" : "git",
+    "url" : "http://github.com/ecogodi/f.git"
+  },
+  "license": "LGPL-2.0+"
+}
