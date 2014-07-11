@@ -1,6 +1,6 @@
 var chai = require('chai');
 var assert = chai.assert;
-var F = require('f');
+var F = require('..');
 
 
 function debug(){
