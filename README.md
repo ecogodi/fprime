@@ -7,7 +7,7 @@ It has a very simple core, but is instrumented to add more complex flow control 
 
 ### 30 seconds intro for Step users
 
-
+```javascript
     var F = require('f');
 
     var mySeq = F(
@@ -24,6 +24,7 @@ It has a very simple core, but is instrumented to add more complex flow control 
 	    else
 	    	console.log(newUpText);
 	}
+```
 
 Key differences from Step:
 * F returns a sequence function while Step executes it right away
@@ -35,6 +36,7 @@ Core features and basic use
 ---------------------------
 The module exports a single function. Call this function with a sequence of step functions to get a new _sequence_ function:
 
+```javascript
     var mySeq =F(
     	function a(input, next){ 
     		var out1 = input,
@@ -47,9 +49,11 @@ The module exports a single function. Call this function with a sequence of step
     		next(null, out, 42); // last step, this will call the sequence final callback
     	}
     );
+```
 
 The step functions are assumed to follow node conventions, i.e. to be in the form `func(err, [args...], callback)` or `func([args...], callback)`. The `next` callback is injected by F as last argument passed to a step when the previous one executes its callback.
 
+```javascript
 	mySeq('foo',function(err, result1, result2){
         console.log(result1, result2);
     })
@@ -59,12 +63,14 @@ The step functions are assumed to follow node conventions, i.e. to be in the for
         console.log(result1, result2);
     })
     // -> barbazbar 42
+```
 
 The sequence function itself accepts input arguments and a _final callback_ with error as a first argument. The input arguments are passed to the first step, then the sequence steps are executed in order, each one calling the next step upon completion or passing it as an async callback to some operation. The last step in turn calls the final (sequence) callback as next.
 
 
 ### Sequence State
 All step functions are bound by F to a context where information can be kept for the duration of the sequence.
+
 ```javascript	
 	var mySeq = F(
 		function save(filename, next){
@@ -82,6 +88,7 @@ All step functions are bound by F to a context where information can be kept for
 		}
 	);
 ```
+
 ### Parallelization
 Parallel execution is supported through the use of the `next.push()` method attached to the injected next callback.
 
@@ -91,6 +98,7 @@ TODO
 #### Map-like result grouping
 Alternatively, you can give strings as keys in `next.push`
 
+```javascript	
 	var mySeq = F(
     	fs.readdir,
     	function b(err, filenames, next){
@@ -102,6 +110,7 @@ Alternatively, you can give strings as keys in `next.push`
     );
 
 	mySeq(__dirname, console.log);
+```
 
 As in the previous case, all functions will execute in parallel. When _all_ of them have finished, the next step will be executed and passed:
 
