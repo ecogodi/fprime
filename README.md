@@ -65,7 +65,7 @@ The sequence function itself accepts input arguments and a _final callback_ with
 
 ### Sequence State
 All step functions are bound by F to a context where information can be kept for the duration of the sequence.
-	
+```javascript	
 	var mySeq = F(
 		function save(filename, next){
 			// we store something in the sequence state
@@ -81,7 +81,7 @@ All step functions are bound by F to a context where information can be kept for
 			next(null,snippet);
 		}
 	);
-
+```
 ### Parallelization
 Parallel execution is supported through the use of the `next.push()` method attached to the injected next callback.
 
