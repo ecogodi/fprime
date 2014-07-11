@@ -1,9 +1,13 @@
 var F = require('./lib/f.js');
 
 // You're strongly encouraged to mix and match: pick the helpers you really need and add your own
-F.onErrorExit = function(err,res,next){
+F.onErrorExit = function(){
+	var args = Array.prototype.slice.call(arguments);
+	var err = args.shift();
+	var next = args.pop();
+
 	if(!err)
-		next(res);
+		next.apply(this,args);
 	else if(err instanceof Array){
 		for(var i in err){
 			if(err[i]){
@@ -11,26 +15,30 @@ F.onErrorExit = function(err,res,next){
 				return;
 			}
 		}
-		next(res);
+		next.apply(this,args);
 	}
 	else
 		this.F.exit(err);
 };
 
-F.onResultExit = function(err,res,next){
-	if(!res)
+F.onResultExit = function(){
+	var args = Array.prototype.slice.call(arguments);
+	var err = args.shift();
+	var next = args.pop();
+
+	if(!args)
 		next();
-	else if(res instanceof Array){
-		for(var i in res){
-			if(res[i]){
-				this.F.exit(null,res);
+	else if(args instanceof Array){
+		for(var i in args){
+			if(args[i]){
+				this.F.exit.apply(this,[err].concat(args));
 				return;
 			}
 		}
-		next();
+		next.apply(this,args);
 	}
 	else
-		this.F.exit(null,res);
+		this.F.exit.apply(this,[err].concat(args));
 };
 
 F.while = function(c,f){

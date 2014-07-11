@@ -19,6 +19,12 @@ function delayedErr(delay){
 	}
 }
 
+function delayedNoErr(delay){
+	return function(cb){
+		setTimeout(cb,delay);
+	}
+}
+
 function a(input,next){
 	debug('a',input);
 	if(input == 'please_err')
@@ -75,12 +81,23 @@ function pe(input,next){
 	delayedErr(200)(next.push());
 }
 
+function x(err,input,next){
+	debug('x',err,input);
+	next(err,'x0',input+'-x');
+}
+
+function y(input0,input1,next){
+	debug('y',input0,input1);
+	next(input1+'-y');
+}
+
 function i(err,result,next){
 	debug('i:', err, result);
 	next(err,result);
 }
 
 var e = F.onErrorExit;
+var re = F.onResultExit;
 
 describe('F -> ', function(){
 
@@ -97,19 +114,10 @@ describe('F -> ', function(){
 
 
 		it('multiple function sequence', function(done){
-			F(a,e,b)('start',function(err,result){
+			F(a,x,e,y,b)('start',function(err,result){
 				done();
 				assert.notOk(err,'no error');
-				assert.equal(result,'start-a-b', 'expected result');
-			});
-		});
-
-
-		it('sequence with exit on error', function(done){
-			F(a,e,b)('please_err',function(err,result){
-				done();
-				assert.ok(err,'truthy error');
-				assert.equal(err,'err as requested', 'expected error');
+				assert.equal(result,'start-a-x-y-b', 'expected result');
 			});
 		});
 
@@ -253,6 +261,32 @@ describe('F -> ', function(){
 		});
 
 	});
+	
+	describe('exit helper tests -> ', function(){
+		it('sequence with exit on error (exit)', function(done){
+			F(a,x,e,b)('please_err',function(err,result){
+				done();
+				assert.ok(err,'truthy error');
+				assert.equal(err,'err as requested', 'expected error');
+			});
+		});
+
+		it('sequence with exit on result (exit)', function(done){
+			F(a,re,b)('input',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.equal(result,'input-a', 'expected result');	
+			});
+		});
+
+		it('sequence with exit on result (no exit)', function(done){
+			F(a,re,b)('please_err',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.equal(result,'null-b', 'expected result');	
+			});
+		});
+	});
 
 	describe('"while" helper tests -> ', function(){
 
@@ -265,7 +299,7 @@ describe('F -> ', function(){
 			this.myCount = this.myCount || 0;
 			this.myCount++;
 
-			delayed(25)(null,next);
+			delayedNoErr(25)(next);
 		};
 
 		it('test of a "while" costruct augmentation (0)', function(done){
