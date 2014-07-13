@@ -1,13 +1,14 @@
 F
 =
 
-Another async sequences execution library.  
-It has a very simple core, but is instrumented to add more complex flow control features.
+Another asynchronous flow control library for javascript. 
+It has a very simple core, but is instrumented to add more complex, customized constructs.
 
 
 ### 30 seconds intro for Step users
 
 ```javascript
+
     var F = require('f');
 
     var mySeq = F(
@@ -24,6 +25,7 @@ It has a very simple core, but is instrumented to add more complex flow control 
 	    else
 	    	console.log(newUpText);
 	}
+
 ```
 
 Key differences from Step:
@@ -37,11 +39,14 @@ Core features and basic use
 The module exports a single function. Call this function with a sequence of step functions to get a new _sequence_ function:
 
 ```javascript
-    var mySeq =F(
+
+    var mySeq = F(
     	function a(input, next){ 
     		var out1 = input,
     			out2 = 'baz' + input;
-    		// next must be called 'manually' or passed as completion cb of an async procedure
+    		// next must be called 'manually' or passed 
+            // as completion callback of an async.
+             procedure
     		next(null, out1, out2); 
     	},
     	function b(err, arg1, arg2, next){
@@ -49,11 +54,13 @@ The module exports a single function. Call this function with a sequence of step
     		next(null, out, 42); // last step, this will call the sequence final callback
     	}
     );
+
 ```
 
-The step functions are assumed to follow node conventions, i.e. to be in the form `func(err, [args...], callback)` or `func([args...], callback)`. The `next` callback is injected by F as last argument passed to a step when the previous one executes its callback.
+The step functions are assumed to follow node conventions, i.e. to be in the form `func(err, [args...], callback)` or `func([args...], callback)`. The `next` function is injected by F as last argument passed to a step.
 
 ```javascript
+
 	mySeq('foo',function(err, result1, result2){
         console.log(result1, result2);
     })
@@ -63,6 +70,7 @@ The step functions are assumed to follow node conventions, i.e. to be in the for
         console.log(result1, result2);
     })
     // -> barbazbar 42
+
 ```
 
 The sequence function itself accepts input arguments and a _final callback_ with error as a first argument. The input arguments are passed to the first step, then the sequence steps are executed in order, each one calling the next step upon completion or passing it as an async callback to some operation. The last step in turn calls the final (sequence) callback as next.
@@ -71,7 +79,8 @@ The sequence function itself accepts input arguments and a _final callback_ with
 ### Sequence State
 All step functions are bound by F to a context where information can be kept for the duration of the sequence.
 
-```javascript	
+```javascript
+
 	var mySeq = F(
 		function save(filename, next){
 			// we store something in the sequence state
@@ -87,19 +96,48 @@ All step functions are bound by F to a context where information can be kept for
 			next(null,snippet);
 		}
 	);
+
 ```
 
 ### Parallelization
-Parallel execution is supported through the use of the `next.push()` method attached to the injected next callback.
+Parallel execution is supported through the use of the `next.push()` method attached to the injected next function. This method takes an optional key (see later) and generates a special _parallel next_ function. As with the usual next, it can be called manually or used as an async procedure callback.
+Only after completion of all parallel executions the grouped errors and results are forwarded to next step.
 
-#### Array-like result grouping
-TODO
+#### "Numeric" result grouping
+Calling `next.push()` with no key will return parallel execution functions and count them: 
 
-#### Map-like result grouping
-Alternatively, you can give strings as keys in `next.push`
+```javascript   
 
-```javascript	
-	var mySeq = F(
+    var myPrlSeq = F(
+        fs.readdir,
+        function b(err, filenames, next){
+            next.push()(null,'sync result'); // first parallel
+            fs.open(__dirname+'/'+filenames[1], 'r', next.push() ); // second parallel
+            fs.open(__dirname+'/'+filenames[2], 'r', next.push() ); // third parallel
+        }
+    );
+
+```
+
+All functions will execute in parallel and are expected to end calling (err, result). When _all_ of them have finished, the next step will be fed:
+
+1. a map of execution errors with numeric keys, in the order in which they were pushed 
+2. the results of the parallel executions, as arguments, in the order in which they were pushed 
+
+```javascript  
+
+    myPrlSeq(__dirname, console.log );
+
+    // -> { '0': null, '1': null, '2': null }, '1': 'sync result', '2': 11, '3': 12 } (e.g.)
+
+```
+
+#### "Map" result grouping
+Alternatively you can explicitely provide keys in `next.push`, to get "named" parallel execution functions:
+
+```javascript
+
+	var myPrlSeq2 = F(
     	fs.readdir,
     	function b(err, filenames, next){
     		if(err)
@@ -109,61 +147,72 @@ Alternatively, you can give strings as keys in `next.push`
     	}
     );
 
-	mySeq(__dirname, console.log);
+	myPrlSeq2(__dirname, console.log);
+    
 ```
 
-As in the previous case, all functions will execute in parallel. When _all_ of them have finished, the next step will be executed and passed:
+As in the previous case, all functions will execute in parallel. When _all_ of them have finished, the next step will be fed:
 
-1. a map of errors, with the given keys and for each the error of that execution, if any
+1. a map of errors, with the given keys and for each the error of that execution
 2. a map of results, with the given keys and for each the result of that execution
 
-#### Shorthand for parallelization
-TODO
+**Nota Bene:** you _can_ pass numeric keys as in `next.push(42)`. If _all_ keys are numeric, the results will still be grouped as in the array-like case. Since you can provide any numeric key the array might be _sparse_ resulting in some arguments being fed as undefined to the next step.
 
-If you need more 
+#### Caveats
+*  If a parallelized function executes a callback with more than one result argument, an array of values will be grouped instead of a single result value.
+*  if a next.push() result is 
+
+Slightly less basic use
+-----------------------
+
+### Nested sequences
+
+TODO: documentation (see tests for examples)
+
+#### Compact notation for filtering/mapping
+TODO: documentation (see tests for examples)
+
+### Contextual F namespace
+
+The context of step execution, that is the sequence "state", comes populated with a namespace, **F**, containing utility methods available to step functions.
+
+#### this.F.exit(err, result)
+Exits the current sequence by immediatly executing the final sequence callback with given error and result.
+
+#### this.F.rewind()
+Resets the current sequence, so that `next` actually points to the first step. The sequence state, though, is preserved for the next loop. 
+
+
+If you need more (hint: you will)
 ----------------
-#### (hint: you will)
 
 You might have noticed that the main entry point for the package is not the core F (`/lib/f.js`) but rather the **F'** wrapper (`fprime.js`).
 
-F' decorates the core F with extra utility features. This is actually the suggested main way to use F: enrich it with the helpers and augmentations you need (see later).
+F' decorates the core F with extra utility features. This is actually the suggested main way to use F: enrich it with the helpers and augmentations you need.
 
 ### Helpers
-Helpers are functions attached to the main exported function. They all accept callbacks as last arguments and can be dropped in place of a step in any sequence.
+Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences.
 
-#### F.onErrorExit(err, result, cb)
-This helper step function will exit the sequence if it is fed a non-null error (or a map containing a non-null error).
+#### F.onErrorExit(err, args..., cb)
+This helper _step_ function will exit the sequence if it is fed a non-null error (or a map containing a non-null error). if no error was passed, it will forward _only_ the remaining args to the next step. Useful as an adapter for pre-made functions that  take no error as an argument.
 
 #### F.onResultExit(err, result, cb)
-This helper step function will exit the sequence if it is fed a non-null result (or a map containing a non-null result).
+This helper _step_ function will exit the sequence if it is fed a non-null result (or a map containing a non-null result). In all other cases it will forward the received err and (null-ish) result to the next step.
 
-#### F.while(checkFun,loopFun)
+#### F.while(checkFun, loopFun)
 Given an (async) check function returning a boolean and an (async) loop function, this helper returns a sequence that:
 
 1. feeds its input to the loop function
 2. each time the check function returns true, executes the looped function
 3. when the check function return false, the sequence is exited to the final callback with the sequence state as argument
 
-TODO: example of use
+TODO: examples of use
 
 ### Nested sequences
 
-TODO
+TODO: documentation (see tests for examples)
 
-### Inner F namespace and augmentations
+### Augmentations
 
-TODO
+TODO: documentation (see tests for examples)
 
--------------------
-Addendum: rationale for yet-another-async-flow-library
-------------------------------------------------------
-
-**Step** is neat and svelte, but has a few quirks I found unpleasant
-* by _returning_ sequence functions, F is intended to build nestable code blocks, doing away with wrapping Step in functions and passing arguments through closures
-* expecting the continuation callback as last argument, most node-styled functions can be dropped in place as a sequence step
-* `this` is freed for use as a persistent state
-
-On the other hand **Async** offers a lot more: looping constructs, mapping, retries, worker queues, etc.
-Along with what you need, though, comes a lot you won't use at the same time, or that would better be replaced by different, more focused tools. 
-Also, you aren't always given complete control over the execution: what if we need an `async.map` that doesn't end at first error, or ends as soon as we got k results out of n? 
-* by starting with an elementary core of features on which helpers and augmentations are built, F aims at letting you define or reuse exactly the constructs you need 

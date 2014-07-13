@@ -92,7 +92,7 @@ function y(input0,input1,next){
 }
 
 function i(err,result,next){
-	debug('i:', err, result);
+	debug('i:', arguments);
 	next(err,result);
 }
 
@@ -167,7 +167,7 @@ describe('F -> ', function(){
 		it('result accumulation', function(done){
 			F(a,e,
 				p
-			)('start',function(err,result1,result2,result3){
+			)('start',function(err,result1,result2,result3,result4){
 				done();
 				assert.isObject(err,'array-like error');
 				assert.isDefined(err[0],'error index was set');
@@ -179,12 +179,13 @@ describe('F -> ', function(){
 				assert.equal(result1,'start-a-p1', 'expected result');
 				assert.notOk(result2,'expected null');
 				assert.equal(result3,'start-a-p2', 'expected result');
+				assert.isUndefined(result4,'no more results');
 			});
 		});
 
 		it('result accumulation with named params', function(done){
 			F(a,e,
-				pn
+				pn,i
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
@@ -200,7 +201,7 @@ describe('F -> ', function(){
 
 		it('result accumulation in sequence', function(done){
 			F(a,e,
-				pm
+				pm,i
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
@@ -227,8 +228,9 @@ describe('F -> ', function(){
 		});
 
 		it('shorthand for parallel (array)', function(done){
-			F(a,e,
-				[b,c,d,'foo']
+			F(
+				[a,'const',42],
+				[,b,d,8]
 			)('start',function(err,resultb,resultc,resultd){
 				done();
 				assert.isObject(err,'array-like error');
@@ -237,26 +239,55 @@ describe('F -> ', function(){
 				assert.notOk(err[1],'no error');
 				assert.notOk(err[2],'no error');
 				assert.equal(resultb,'start-a-b', 'expected result');
-				assert.equal(resultc,'start-a-c', 'expected result');
-				assert.equal(resultd,'start-a-d', 'expected result');
+				assert.equal(resultc,'const-d', 'expected result');
+				assert.equal(resultd,'8', 'expected result');
 			});
 		});
 
-		it('shorthand for parallel (object)', function(done){
-			F(a,e,
+		it('shorthand multifunction', function(done){
+			F( a,e,
 				{'resultb':b,'resultc':c,'resultd':d,'foo':2}
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),3,'error length');
+				assert.lengthOf(Object.keys(err),4,'error length');
 				assert.notOk(err.resultb,'no error');
 				assert.notOk(err.resultc,'no error');
 				assert.notOk(err.resultd,'no error');
 				assert.isObject(result,'array-like result');
-				assert.lengthOf(Object.keys(result),3,'error length');
+				assert.lengthOf(Object.keys(result),4,'result length');
 				assert.equal(result.resultb,'start-a-b', 'expected result');
 				assert.equal(result.resultc,'start-a-c', 'expected result');
 				assert.equal(result.resultd,'start-a-d', 'expected result');
+			});
+		});
+
+		it('shorthand map (over array)', function(done){
+			F(
+				[,[a]]
+			)('input1', ['input2-1','input2-2','input2-3'], 'input3', function(err, result){
+				done();
+				assert.isObject(err,'array-like error');
+				assert.notOk(err[0].t,'no error');
+				assert.notOk(err[1],'no error');
+				assert.isObject(result,'array-like result');
+				assert.deepEqual(result,{ '0': 'input2-1-a', '1': 'input2-2-a', '2': 'input2-3-a' }, 'expected result');
+				
+			});
+		});
+
+		it('shorthand map (over object)', function(done){
+			F(
+				[,[a],b]
+			)('input1', {t:'input2'}, 'input3', function(err, result1, result2){
+				done();
+				assert.isObject(err,'array-like error');
+				assert.notOk(err[0].t,'no error');
+				assert.notOk(err[1],'no error');
+				assert.isObject(result1,'array-like result');
+				assert.deepEqual(result1,{t:'input2-a'}, 'expected result');
+				assert.equal(result2,'input3-b', 'expected result');
+				
 			});
 		});
 
@@ -283,7 +314,7 @@ describe('F -> ', function(){
 			F(a,re,b)('please_err',function(err,result){
 				done();
 				assert.notOk(err,'no error');
-				assert.equal(result,'null-b', 'expected result');	
+				assert.equal(result,'undefined-b', 'expected result');	
 			});
 		});
 	});
