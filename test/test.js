@@ -28,9 +28,9 @@ function delayedNoErr(delay){
 function a(input,next){
 	debug('a',input);
 	if(input == 'please_err')
-		delayedErr(100)(next);
+		delayedErr(10)(next);
 	else
-		delayed(100)(input+'-a',next);
+		delayed(5)(input+'-a',next);
 }
 
 function s(input,next){
@@ -38,34 +38,34 @@ function s(input,next){
 	this.foo = 'bar';
 	this.parent.foo = 'baz'
 	
-	delayed(100)(input,next);
+	delayed(10)(input,next);
 }
 
 function b(input,next){
 	debug('b',input);
-	delayed(200)(input+'-b',next);
+	delayed(12)(input+'-b',next);
 }
 
 function c(input,next){
 	debug('c',input);
-	delayed(300)(input+'-c',next);
+	delayed(13)(input+'-c',next);
 }
 
 function d(input,next){
 	debug('d',input);
-	delayed(400)(input+'-d',next);
+	delayed(14)(input+'-d',next);
 }
 
 function p(input, next){
 	debug('p',input);
-	delayed(300)(input+'-p1', next.push());
-	delayed(500)(input+'-p2', next.push(2));
+	delayed(13)(input+'-p1', next.push());
+	delayed(15)(input+'-p2', next.push(2));
 }
 
 function pn(input, next){
 	debug('pn',input);
-	delayed(300)(input+'-pna',next.push('a'));
-	delayed(200)(input+'-pnb',next.push('b'));
+	delayed(13)(input+'-pna',next.push('a'));
+	delayed(12)(input+'-pnb',next.push('b'));
 }
 
 function pm(input, next){
@@ -77,8 +77,8 @@ function pm(input, next){
 
 function pe(input,next){
 	debug('pe',input);
-	delayed(500)(input+'-pe1',next.push());
-	delayedErr(200)(next.push());
+	delayed(15)(input+'-pe1',next.push());
+	delayedErr(12)(next.push());
 }
 
 function x(err,input,next){
@@ -323,14 +323,14 @@ describe('F -> ', function(){
 
 		var lessThanCount = function(input, next){
 			var check = !( (this.myCount || 0) >=input.maxCount );
-			delayed(25)(check,next);
+			delayed(5)(check,next);
 		};
 
 		var myLoopedFunc = function(err,input,next){
 			this.myCount = this.myCount || 0;
 			this.myCount++;
 
-			delayedNoErr(25)(next);
+			delayedNoErr(5)(next);
 		};
 
 		it('test of a "while" costruct augmentation (0)', function(done){
@@ -358,10 +358,17 @@ describe('F -> ', function(){
 
 	describe('augmentation tests -> ', function(){
 		beforeEach(function(){
-			F.augment({'jumpWithArgs':function(c,array){
-				this.setNextStepId(c+1);
-				this.runOneStep(c,array);
-			}})
+			var myAugments = {
+				'jumpWithArgs':{
+					type: 'stateF',
+					f: function(c,array){
+						this.setNextStepId(c+1);
+						this.runOneStep(c,array);
+					}
+				}
+			};
+
+			F.augment(myAugments);
 		});
 
 		it('sequence using jump augmentation', function(done){
