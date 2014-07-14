@@ -100,7 +100,7 @@ All step functions are bound by F to a context where information can be kept for
 ```
 
 ### Parallelization
-Parallel execution is supported through the use of the `next.push()` method attached to the injected next function. This method takes an optional key (see later) and generates a special _parallel next_ function. As with the usual next, it can be called manually or used as an async procedure callback.
+Parallel execution is supported through the use of the `next.push()` method attached to the injected next function. This method takes an optional key (see later) and _generates_ a special _parallel next_ function. As with the usual next, it can be called manually or used as an async procedure callback.
 Only after completion of all parallel executions the grouped errors and results are forwarded to next step.
 
 #### "Numeric" result grouping
@@ -156,21 +156,13 @@ As in the previous case, all functions will execute in parallel. When _all_ of t
 1. a map of errors, with the given keys and for each the error of that execution
 2. a map of results, with the given keys and for each the result of that execution
 
-**Nota Bene:** you _can_ pass numeric keys as in `next.push(42)`. If _all_ keys are numeric, the results will still be grouped as in the array-like case. Since you can provide any numeric key the array might be _sparse_ resulting in some arguments being fed as undefined to the next step.
-
-#### Caveats
-*  If a parallelized function executes a callback with more than one result argument, an array of values will be grouped instead of a single result value.
-*  if a next.push() result is 
+#### Nota Bene:
+* you _can_ pass numeric keys to the generator, as in `next.push(42)`. If _all_ keys are numeric, the results will still be grouped as in the array-like case. Since you can provide any numeric key the array might be _sparse_ resulting in some arguments being fed as undefined to the next step.
+* if a parallelized function executes a callback with more than one result argument, an array of values will be grouped instead of a single result value.
+* if you mix synchronous calls of parallel next functions with asynchronous passing of callbacks, the sync. calls will execute immediatly, but their result will still wait the async. ones.
 
 Slightly less basic use
 -----------------------
-
-### Nested sequences
-
-TODO: documentation (see tests for examples)
-
-#### Compact notation for filtering/mapping
-TODO: documentation (see tests for examples)
 
 ### Contextual F namespace
 
@@ -182,6 +174,79 @@ Exits the current sequence by immediatly executing the final sequence callback w
 #### this.F.rewind()
 Resets the current sequence, so that `next` actually points to the first step. The sequence state, though, is preserved for the next loop. 
 
+Additional utility methods can be added through _augmentations_ (see later). 
+
+### Nested sequences
+Since each F sequence is itself a function taking arguments and a callback, it can be nested as a step of another sequence. 
+A child sequence has a reference to the state of its parent in the state property `this.parent`. A top-level sequence has the context of the call of F set as its parent property.
+
+```javascript
+
+	var exitGrandparent = function(in,next){
+		...
+		this.parent.F.exit(null,out);
+	}
+			
+	F(
+		a,b,
+		F(c,d,F(e,exitGrandparent)),
+		f,g,h
+	)( ... , finalCb);
+    
+    // will execute a,b,c,d,e then exit by calling finalCb(null,out)
+```
+
+### Compact notation and mapping
+
+#### Value steps
+
+```javascript
+	
+	F(
+		42,a
+	)( ... , finalCb);
+    
+    // a non-function step of given value is repalced by `next(null, value)`
+```
+
+#### Map function over iterable
+
+```javascript
+	
+	F(
+		a,
+		[b]
+	)( ... , finalCb);
+    
+    // b is called in parallel iterating over all properties of the first argument fed to the step;
+    // each parallel is called with the key of iteration
+```
+
+#### Map functions over arguments
+
+```javascript
+	
+	F(
+		a,
+		[,b,,c]
+	)( ... , finalCb);
+    
+    // b is applied to the second argument called on the step, c to the fourth;
+    // they are called in parallel with `next-push()` 
+```
+
+#### Apply map of functions
+
+```javascript
+	
+	F(
+		a,
+		{ first:b, second:c }
+	)( ... , finalCb);
+    
+    // b,c are called in parallel with keys 'first', 'second'; 
+    // both are fed the first argument passed to the step
+```
 
 If you need more (hint: you will)
 ----------------
@@ -207,10 +272,6 @@ Given an (async) check function returning a boolean and an (async) loop function
 3. when the check function return false, the sequence is exited to the final callback with the sequence state as argument
 
 TODO: examples of use
-
-### Nested sequences
-
-TODO: documentation (see tests for examples)
 
 ### Augmentations
 
