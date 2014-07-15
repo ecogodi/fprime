@@ -1,15 +1,13 @@
-F
+F'
 =
 
-Another asynchronous flow control library for javascript. 
-It has a very simple core, but is instrumented to add more complex, customized constructs.
-
+**F'** - or _F prime_ - is another asynchronous flow control library for javascript. 
+It has a very simple core, but is instrumented to add more complex, customized constructs. 
+For reasons clarified [later](#if-you-need-more-hint-you-will), it will also be referred to as simply **F**.
 
 ### 30 seconds intro for Step users
 
 ```javascript
-
-    var F = require('f');
 
     var mySeq = F(
 		fs.readFile,
