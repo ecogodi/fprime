@@ -70,11 +70,14 @@ F.while = function(check, f){
 };
 
 F.map = function(f){
-	return function(iterable,next){
+	return function(){
+		var args = Array.prototype.slice.call(arguments),
+			next = args.pop(),
+			iterable = args.shift();
 		if(iterable && f){
 			for(var i in iterable){
 				if(iterable.hasOwnProperty(i)){
-					F(f)(iterable[i],next.push(''+i) );
+					F(f)( iterable[i], next.push(''+i) );
 				}
 			}
 		}
@@ -86,57 +89,70 @@ F.map = function(f){
 F.mapArgs = function(){
 	var parallelSteps = Array.prototype.slice.call(arguments);
 	return function(){
-		var parallelArgs = Array.prototype.slice.call(arguments),
-			next = parallelArgs.pop();
+		var args = Array.prototype.slice.call(arguments),
+			next = args.pop();
 		for(var p in parallelSteps){
 			if(parallelSteps[p]!==undefined)
-				F(parallelSteps[p])( parallelArgs[p],next.push() );
+				F(parallelSteps[p])( args[p], next.push() );
 		}
 	};
 }
 
 F.applyFuncs = function(parallelSteps){
 	return function(){
-		var parallelArgs = Array.prototype.slice.call(arguments),
-			next = parallelArgs.pop();
-		var p;
-		for(p in parallelSteps){
+		var args = Array.prototype.slice.call(arguments),
+			next = args.pop();
+		for(var p in parallelSteps){
 			if(parallelSteps[p]!==undefined)
-				F(parallelSteps[p])( parallelArgs[0],next.push(p) );
+				F(parallelSteps[p]).apply( this, args.concat(next.push(p)) );
 		}
 	};
 }
 
-var shorthands = {
-	shorthand_array: {
-		type: 'stepFilter',
-		f: function(step){
-			if(step instanceof Array){
-				var stepArray = step;
+// a few short notations for common operators, added as augmentation:
+var shorthands = {};
+shorthands.shorthand_array = {
+	type: 'stepFilter',
+	f: function(step){
+		if(step instanceof Array){
+			var stepArray = step;
 
-				if(step.length>1){
-					step = F.mapArgs.apply(this, stepArray);
-				}
-				else if(step.length==1){
-					step = F.map(stepArray[0]);
-				}
+			if(step.length>1){
+				step = F.mapArgs.apply(this, stepArray);
 			}
-			return step;
-		},
-		options: {order: 10}
+			else if(step.length==1){
+				step = F.map(stepArray[0]);
+			}
+		}
+		return step;
 	},
-	shorthand_object: {
-		type: 'stepFilter',
-		f: function(step){
-			if(typeof step === 'object'){
-				var stepMap = step;
-				step = F.applyFuncs(stepMap);
+	options: {order: 10}
+};
+shorthands.shorthand_object = {
+	type: 'stepFilter',
+	f: function(step){
+		if(typeof step === 'object'){
+			var stepMap = step;
+			step = F.applyFuncs(stepMap);
+		}
+		return step;
+	},
+	options: {order: 20}
+};
+shorthands.shorthand_value = {
+	type: 'stepFilter',
+	f: function(step){
+		if(typeof step !== 'function'){
+			var value = step;
+			step = function(){
+				var next = Array.prototype.slice.call(arguments).pop();
+				next(null,value);
 			}
-			return step;
-		},
-		options: {order: 20}
-	}
-}
+		}
+		return step;
+	},
+	options: {order: 99}
+};
 F.augment(shorthands);
 
 if (typeof module.exports !== "undefined") {

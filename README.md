@@ -33,7 +33,6 @@ Key differences from Step:
 * in F the callback to execute the next step is provided as last argument, whereas in Step it's bound as `this`
 * in F you **must** call or pass `next`, it doesn't support Step's synchronous behaviour on function return
 
-
 Core features and basic use
 ---------------------------
 The module exports a single function. Call this function with a sequence of step functions to get a new _sequence_ function:
@@ -103,15 +102,15 @@ All step functions are bound by F to a context where information can be kept for
 Parallel execution is supported through the use of the `next.push()` method attached to the injected next function. This method takes an optional key (see later) and _generates_ a special _parallel next_ function. As with the usual next, it can be called manually or used as an async procedure callback.
 Only after completion of all parallel executions the grouped errors and results are forwarded to next step.
 
-#### "Numeric" result grouping
-Calling `next.push()` with no key will return parallel execution functions and count them: 
+#### "Queued" parallel results
+Calling `next.push()` with no key will generate a new parallel execution function: 
 
 ```javascript   
 
     var myPrlSeq = F(
         fs.readdir,
         function b(err, filenames, next){
-            next.push()(null,'sync result'); // first parallel
+            next.push()(null,'sync'); // first parallel
             fs.open(__dirname+'/'+filenames[1], 'r', next.push() ); // second parallel
             fs.open(__dirname+'/'+filenames[2], 'r', next.push() ); // third parallel
         }
@@ -128,11 +127,11 @@ All functions will execute in parallel and are expected to end calling (err, res
 
     myPrlSeq(__dirname, console.log );
 
-    // -> { '0': null, '1': null, '2': null }, '1': 'sync result', '2': 11, '3': 12 } (e.g.)
+    // -> { '0': null, '1': null, '2': null }, '1': 'sync', '2': 11, '3': 12 } (e.g.)
 
 ```
 
-#### "Map" result grouping
+#### "Mapped" parallel results
 Alternatively you can explicitely provide keys in `next.push`, to get "named" parallel execution functions:
 
 ```javascript
@@ -157,7 +156,7 @@ As in the previous case, all functions will execute in parallel. When _all_ of t
 2. a map of results, with the given keys and for each the result of that execution
 
 #### Nota Bene:
-* you _can_ pass numeric keys to the generator, as in `next.push(42)`. If _all_ keys are numeric, the results will still be grouped as in the array-like case. Since you can provide any numeric key the array might be _sparse_ resulting in some arguments being fed as undefined to the next step.
+* you can pass numeric keys to the generator, as in `next.push(42)`. If _all_ keys are numeric, the results will still be grouped as in the queued case. Since you can provide any numeric key the arguments array fed to the next step might be _sparse_, resulting in some arguments being undefined.
 * if a parallelized function executes a callback with more than one result argument, an array of values will be grouped instead of a single result value.
 * if you mix synchronous calls of parallel next functions with asynchronous passing of callbacks, the sync. calls will execute immediatly, but their result will still wait the async. ones.
 
@@ -174,7 +173,7 @@ Exits the current sequence by immediatly executing the final sequence callback w
 #### this.F.rewind()
 Resets the current sequence, so that `next` actually points to the first step. The sequence state, though, is preserved for the next loop. 
 
-Additional utility methods can be added through _augmentations_ (see later). 
+Additional utility methods can be added through [_augmentations_](#augmentations) (see later). 
 
 ### Nested sequences
 Since each F sequence is itself a function taking arguments and a callback, it can be nested as a step of another sequence. 
@@ -197,8 +196,9 @@ A child sequence has a reference to the state of its parent in the state propert
 ```
 
 ### Compact notation and mapping
+A few shorthand notations are implemented in F' as augmentations:
 
-#### Value steps
+##### Value steps
 
 ```javascript
 	
@@ -209,7 +209,7 @@ A child sequence has a reference to the state of its parent in the state propert
     // a non-function step of given value is repalced by `next(null, value)`
 ```
 
-#### Map function over iterable
+##### Map function over iterable
 
 ```javascript
 	
@@ -218,11 +218,12 @@ A child sequence has a reference to the state of its parent in the state propert
 		[b]
 	)( ... , finalCb);
     
-    // b is called in parallel iterating over all properties of the first argument fed to the step;
-    // each parallel is called with the key of iteration
+    // b is called in parallel iterating over all properties of the first argument
+    // with which a called next; each parallel is called with the key of iteration
 ```
+This notation makes use of the `F.map(f)` helper, see later
 
-#### Map functions over arguments
+##### Map functions over arguments
 
 ```javascript
 	
@@ -231,11 +232,12 @@ A child sequence has a reference to the state of its parent in the state propert
 		[,b,,c]
 	)( ... , finalCb);
     
-    // b is applied to the second argument called on the step, c to the fourth;
+    // b is applied to the second argument with which a called next, c to the fourth;
     // they are called in parallel with `next-push()` 
 ```
+This notation makes use of the `F.mapArgs(f, g, ...)` helper, see later
 
-#### Apply map of functions
+##### Apply map of functions
 
 ```javascript
 	
@@ -245,35 +247,89 @@ A child sequence has a reference to the state of its parent in the state propert
 	)( ... , finalCb);
     
     // b,c are called in parallel with keys 'first', 'second'; 
-    // both are fed the first argument passed to the step
+    // both are fed all the arguments passed to the step from a
 ```
+This notation makes use of the `F.applyFuncs({k1:f, ...})` helper, see later
+
+#### Composition
+Compact notations _can_ be nested:
+
+```javascript
+	
+	F(
+		a,
+		[,{map:[b], c:c}]
+	)( ... , console.log);
+
+	// -> { 
+	//	'0': { '0': { map: [Object], c: null } },
+	//	'1': { map: <mapresult>, c: <cresult>} 
+	// }
+
+```
+This sequence will
+* discard the first argument coming out of a
+* execute in parallel over the second argument: mapping of b, function c
 
 If you need more (hint: you will)
-----------------
+---------------------------------
 
 You might have noticed that the main entry point for the package is not the core F (`/lib/f.js`) but rather the **F'** wrapper (`fprime.js`).
 
 F' decorates the core F with extra utility features. This is actually the suggested main way to use F: enrich it with the helpers and augmentations you need.
 
 ### Helpers
-Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences.
+Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences. 
 
-#### F.onErrorExit(err, args..., cb)
-This helper _step_ function will exit the sequence if it is fed a non-null error (or a map containing a non-null error). if no error was passed, it will forward _only_ the remaining args to the next step. Useful as an adapter for pre-made functions that  take no error as an argument.
+#### Steps
+##### F.onErrorExit(err, results..., cb)
+This helper _step_ function will exit the sequence if it is fed a non-null error (or a map containing a non-null error). if no error was passed, it will forward _only_ the remaining result args to the next step. Useful as an adapter for pre-made functions that  take no error as an argument.
 
-#### F.onResultExit(err, result, cb)
+##### F.onResultExit(err, results..., cb)
 This helper _step_ function will exit the sequence if it is fed a non-null result (or a map containing a non-null result). In all other cases it will forward the received err and (null-ish) result to the next step.
 
-#### F.while(checkFun, loopFun)
-Given an (async) check function returning a boolean and an (async) loop function, this helper returns a sequence that:
+#### Generators
 
-1. feeds its input to the loop function
-2. each time the check function returns true, executes the looped function
-3. when the check function return false, the sequence is exited to the final callback with the sequence state as argument
+##### F.map(f)
+Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `f` on each value in parallel, with the property name as parallel key.
 
-TODO: examples of use
+##### F.mapArgs([func1], [func2], ...)
+Given n (async) functions, this helper generates a step that applies each function in order to the received arguments. Undefined places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
 
+##### F.applyFuncs( { key1:func1 ... } )
+Given a map of functions, this helper generates a step that executes all of them in parallel over the input arguments received. The function map keys are used as parallel execution keys.
+
+##### F.while(checkFun, loopFun)
+Given an (async) check function returning a boolean and an (async) loop function, this helper generates a sequence that:
+
+1. each time the check function returns true, executes the looped function
+2. when the check function return false, the sequence is exited to the final callback with the sequence state as argument
+
+Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to chenge the _state_ of execution so that the sequence eventually ends.
+
+```javascript
+
+	var lessThanCount = function(input, next){
+		var check = !( (this.loopCount || 0) >= input.maxCount );
+
+		delayed(5)(check,next);
+	};
+
+	var myLoopedFunc = function(err,input,next){
+		this.loopCount = (this.loopCount || 0) + 1;
+		this.output = (this.output || '') + 'foo';
+
+		delayedNoErr(5)(next);
+	};
+
+	F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,finalState){
+		console.log(finalState.output);
+	});
+
+	// -> 'foofoofoo'
+
+```
 ### Augmentations
 
-TODO: documentation (see tests for examples)
+TODO: documentation (see F' code and tests for examples)
 

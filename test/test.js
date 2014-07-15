@@ -227,7 +227,7 @@ describe('F -> ', function(){
 			});
 		});
 
-		it('shorthand for parallel (array)', function(done){
+		it('shorthand map over args', function(done){
 			F(
 				[a,'const',42],
 				[,b,d,8]
@@ -244,9 +244,9 @@ describe('F -> ', function(){
 			});
 		});
 
-		it('shorthand multifunction', function(done){
+		it('shorthand funcs apply', function(done){
 			F( a,e,
-				{'resultb':b,'resultc':c,'resultd':d,'foo':2}
+				{'resultb':b,'resultc':c,'resultd':d,'foo':42}
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
@@ -259,6 +259,7 @@ describe('F -> ', function(){
 				assert.equal(result.resultb,'start-a-b', 'expected result');
 				assert.equal(result.resultc,'start-a-c', 'expected result');
 				assert.equal(result.resultd,'start-a-d', 'expected result');
+				assert.equal(result.foo,42, 'expected result');
 			});
 		});
 
@@ -322,35 +323,37 @@ describe('F -> ', function(){
 	describe('"while" helper tests -> ', function(){
 
 		var lessThanCount = function(input, next){
-			var check = !( (this.myCount || 0) >=input.maxCount );
+			var check = !( (this.loopCount || 0) >= input.maxCount );
 			delayed(5)(check,next);
 		};
 
 		var myLoopedFunc = function(err,input,next){
-			this.myCount = this.myCount || 0;
-			this.myCount++;
-
+			this.loopCount = (this.loopCount || 0) + 1;
+			this.output = (this.output || '') + 'foo';
 			delayedNoErr(5)(next);
 		};
 
 		it('test of a "while" costruct augmentation (0)', function(done){
-			F.while(lessThanCount, myLoopedFunc)({maxCount:0},function(err,result){
+			F.while(lessThanCount, myLoopedFunc)({maxCount:0},function(err,state){
 				done();
-				assert.isUndefined(result.myCount);
+				assert.isUndefined(state.loopCount);
+				assert.isUndefined(state.output);
+			});
+		});
+
+		it('test of a "while" costruct augmentation (3)', function(done){
+			F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,state){
+				done();
+				assert.equal(state.loopCount,3, 'expected result');
+				assert.equal(state.output,'foofoofoo', 'expected result');	
 			});
 		});
 
 		it('test of a "while" costruct augmentation (7)', function(done){
-			F.while(lessThanCount, myLoopedFunc)({maxCount:7},function(err,result){
+			F.while(lessThanCount, myLoopedFunc)({maxCount:7},function(err,state){
 				done();
-				assert.equal(result.myCount,7);
-			});
-		});
-
-		it('test of a "while" costruct augmentation (10)', function(done){
-			F.while(lessThanCount, myLoopedFunc)({maxCount:10},function(err,result){
-				done();
-				assert.equal(result.myCount,10);
+				assert.equal(state.loopCount,7, 'expected result');
+				assert.equal(state.output,'foofoofoofoofoofoofoo', 'expected result');
 			});
 		});
 	});
