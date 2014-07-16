@@ -294,6 +294,20 @@ describe('F -> ', function(){
 
 	});
 	
+	describe('set helper tests -> ', function(){
+		it('set a state', function(done){
+			F(F.set({foo:'baz', bar:42}),a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.ok(result,'truthy result');
+				assert.equal(result,'start-a', 'expected result');
+				assert.equal(this.foo, 'baz', 'expected state');
+				assert.equal(this.bar, 42, 'expected state');
+			});
+		})
+	});
+
+
 	describe('exit helper tests -> ', function(){
 		it('sequence with exit on error (exit)', function(done){
 			F(a,x,e,b)('please_err',function(err,result){

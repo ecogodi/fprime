@@ -288,6 +288,9 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 
 #### Generators
 
+##### F.set(ob)
+Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all argument to the following step.
+
 ##### F.map(f)
 Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `f` on each value in parallel, with the property name as parallel key.
 
