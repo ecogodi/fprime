@@ -294,6 +294,30 @@ describe('F -> ', function(){
 
 	});
 	
+	describe('result helper tests -> ', function(){
+		
+		it('constant value', function(done){
+			F(F.result('myresult'),F.onErrorExit,a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.ok(result,'truthy result');
+				assert.equal(result,'myresult-a', 'expected result');
+			});
+		});
+
+		it('sync function result', function(done){
+			var syncFunc = function(){ return 40 +2 };
+
+			F(F.result(syncFunc),F.onErrorExit,a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.ok(result,'truthy result');
+				assert.equal(result,'42-a', 'expected result');
+			});
+		});
+
+	});
+
 	describe('set helper tests -> ', function(){
 		it('set a state', function(done){
 			F(F.set({foo:'baz', bar:42}),a)('start',function(err,result){

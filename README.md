@@ -1,9 +1,9 @@
 F'
-=
+====
 
 **F'** - or _F prime_ - is another asynchronous flow control library for javascript. 
 It has a very simple core, but is instrumented to add more complex, customized constructs. 
-For reasons clarified [later](#if-you-need-more-hint-you-will), it will also be referred to as simply **F**.
+For reasons clarified [later][needmore], it will also be referred to as simply **F**.
 
 ### 30 seconds intro for Step users
 
@@ -27,9 +27,10 @@ For reasons clarified [later](#if-you-need-more-hint-you-will), it will also be 
 ```
 
 Key differences from Step:
-* F returns a sequence function while Step executes it right away
-* in F the callback to execute the next step is provided as last argument, whereas in Step it's bound as `this`
-* in F you **must** call or pass `next`, it doesn't support Step's synchronous behaviour on function return
+* **F** returns a sequence function while Step executes it right away
+* in **F** the callback to execute the next step is provided as last argument, whereas in Step it's bound as `this`
+* in **F** you **must** call or pass `next`, it doesn't support Step's synchronous behaviour on function return (but you can explicitely wrap a sync function with the [`F.result` helper][fresult]).
+
 
 Core features and basic use
 ---------------------------
@@ -54,7 +55,7 @@ The module exports a single function. Call this function with a sequence of step
 
 ```
 
-The step functions are assumed to follow node conventions, i.e. to be in the form `func(err, [args...], callback)` or `func([args...], callback)`. The `next` function is injected by F as last argument passed to a step.
+The step functions are assumed to follow node conventions, i.e. to be in the form `func(err, [args...], callback)` or `func([args...], callback)`. The `next` function is injected by **F** as last argument passed to a step.
 
 ```javascript
 
@@ -74,7 +75,7 @@ The sequence function itself accepts input arguments and a _final callback_ with
 
 
 ### Sequence State
-All step functions are bound by F to a context where information can be kept for the duration of the sequence.
+All step functions are bound by **F** to a context where information can be kept for the duration of the sequence.
 
 ```javascript
 
@@ -171,11 +172,11 @@ Exits the current sequence by immediatly executing the final sequence callback w
 #### this.F.rewind()
 Resets the current sequence, so that `next` actually points to the first step. The sequence state, though, is preserved for the next loop. 
 
-Additional utility methods can be added through [_augmentations_](#augmentations) (see later). 
+Additional utility methods can be added through [_augmentations_][augments] (see later). 
 
 ### Nested sequences
-Since each F sequence is itself a function taking arguments and a callback, it can be nested as a step of another sequence. 
-A child sequence has a reference to the state of its parent in the state property `this.parent`. A top-level sequence has the context of the call of F set as its parent property.
+Since each **F** sequence is itself a function taking arguments and a callback, it can be nested as a step of another sequence. 
+A child sequence has a reference to the state of its parent in the state property `this.parent`. A top-level sequence has the context of the call of **F** set as its parent property.
 
 ```javascript
 
@@ -194,18 +195,7 @@ A child sequence has a reference to the state of its parent in the state propert
 ```
 
 ### Compact notation and mapping
-A few shorthand notations are implemented in F' as augmentations:
-
-##### Value steps
-
-```javascript
-	
-	F(
-		42,a
-	)( ... , finalCb);
-    
-    // a non-function step of given value is repalced by `next(null, value)`
-```
+A few shorthand notations are implemented in **F'** as augmentations:
 
 ##### Map function over iterable
 
@@ -219,7 +209,7 @@ A few shorthand notations are implemented in F' as augmentations:
     // b is called in parallel iterating over all properties of the first argument
     // with which a called next; each parallel is called with the key of iteration
 ```
-This notation makes use of the `F.map(f)` helper, see later
+This notation makes use of the [`F.map` helper][fmap], see later
 
 ##### Map functions over arguments
 
@@ -233,7 +223,7 @@ This notation makes use of the `F.map(f)` helper, see later
     // b is applied to the second argument with which a called next, c to the fourth;
     // they are called in parallel with `next-push()` 
 ```
-This notation makes use of the `F.mapArgs(f, g, ...)` helper, see later
+This notation makes use of the [`F.mapArgs` helper][fmapargs], see later
 
 ##### Apply map of functions
 
@@ -247,7 +237,19 @@ This notation makes use of the `F.mapArgs(f, g, ...)` helper, see later
     // b,c are called in parallel with keys 'first', 'second'; 
     // both are fed all the arguments passed to the step from a
 ```
-This notation makes use of the `F.applyFuncs({k1:f, ...})` helper, see later
+This notation makes use of the [`F.applyFuncs` helper][fapplyfuncs], see later
+
+##### Value steps
+
+```javascript
+	
+	F(
+		42,a
+	)( ... , finalCb);
+    
+    // a non-function step of given value is replaced by `next(null, value)`
+```
+This notation makes use of the [`F.result` helper][fresult], see later. Nota bene: this notation by default has a lower priority than the map/array ones.
 
 #### Composition
 Compact notations _can_ be nested:
@@ -272,9 +274,9 @@ This sequence will
 If you need more (hint: you will)
 ---------------------------------
 
-You might have noticed that the main entry point for the package is not the core F (`/lib/f.js`) but rather the **F'** wrapper (`fprime.js`).
+You might have noticed that the main entry point for the package is not the core **F** (`/lib/f.js`) but rather the **F'** wrapper (`fprime.js`).
 
-F' decorates the core F with extra utility features. This is actually the suggested main way to use F: enrich it with the helpers and augmentations you need.
+**F'** decorates the core F with extra utility features. This is actually the suggested main way to use **F**: enrich it with the helpers and augmentations you need.
 
 ### Helpers
 Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences. 
@@ -288,7 +290,11 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 
 #### Generators
 
-##### F.set(ob)
+##### F.result(func | value)
+Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync result.  
+If a constant value is given instead of a function, that value is passed to next as the step result.
+
+##### F.set(object)
 Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all argument to the following step.
 
 ##### F.map(f)
@@ -334,3 +340,12 @@ Note that the input fed to the sequence is passed as arguments to both the check
 
 TODO: documentation (see F' code and tests for examples)
 
+-------------------------------------------------------------------------
+
+[needmore]:    #if-you-need-more-hint-you-will
+[fonerrorexit]:#fonerrorexiterr-results-cb
+[fresult]:     #fresultfunc--value
+[fmap]:        #fmapf
+[fmapargs]:    #fmapargsfunc1-func2-
+[fapplyfuncs]: #fapplyfuncs--key1func1---
+[augments]:    #augmentations

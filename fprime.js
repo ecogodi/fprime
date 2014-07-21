@@ -62,6 +62,16 @@ F.set = function(ob){
     };
 }
 
+F.result = function(res){
+    var r = res;
+    return function(){
+        var args = Array.prototype.slice.call(arguments),
+            next = args.pop(),
+            value = typeof r == 'function' ? r.apply(this,args) : r;
+        next(null,value);
+    }
+}
+
 F.while = function(check, f){
     var saveInput = function(input,next){
         if(!this._input)
@@ -165,10 +175,7 @@ shorthands.shorthand_value = {
     f: function(step){
         if(typeof step !== 'function'){
             var value = step;
-            step = function(){
-                var next = Array.prototype.slice.call(arguments).pop();
-                next(null,value);
-            }
+            step = F.result(value);
         }
         return step;
     },
