@@ -290,47 +290,53 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 
 #### Generators
 
-##### F.result(func | value)
+##### F.result( func | value )
 Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync result.  
 If a constant value is given instead of a function, that value is passed to next as the step result.
 
-##### F.set(object)
+##### F.set( object )
 Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all argument to the following step.
 
-##### F.map(f)
-Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `f` on each value in parallel, with the property name as parallel key.
+##### F.map( func )
+Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as parallel key.
 
-##### F.mapArgs([func1], [func2], ...)
+##### F.mapArgs( [func1], [func2], ...)
 Given n (async) functions, this helper generates a step that applies each function in order to the received arguments. Undefined places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
 
 ##### F.applyFuncs( { key1:func1 ... } )
 Given a map of functions, this helper generates a step that executes all of them in parallel over the input arguments received. The function map keys are used as parallel execution keys.
 
-##### F.while(checkFun, loopFun)
+##### F.if( checkFunc, func )
+Given an (async) check function returning a boolean and an (async) function, this helper generates a sequence that calls `func` with the given sequence arguments only if the checkFunc returns a truthy result.
+
+##### F.while( checkFunc, loopFunc )
 Given an (async) check function returning a boolean and an (async) loop function, this helper generates a sequence that:
 
 1. each time the check function returns true, executes the looped function
-2. when the check function return false, the sequence is exited to the final callback with the sequence state as argument
+2. when the check function return false or error, the sequence is exited. The final callback is called with the error, if any,  and the sequence state as result
 
-Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to chenge the _state_ of execution so that the sequence eventually ends.
+Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to change the _state_ of execution so that the sequence eventually ends.
 
 ```javascript
 
 	var lessThanCount = function(input, next){
 		var check = !( (this.loopCount || 0) >= input.maxCount );
 
-		delayed(5)(check,next);
+		delayedResult(5)(check,next); //call next(null,check) after 5 ms
 	};
 
-	var myLoopedFunc = function(err,input,next){
+	var myLoopedFunc = function(input,next){
 		this.loopCount = (this.loopCount || 0) + 1;
 		this.output = (this.output || '') + 'foo';
 
-		delayedNoErr(5)(next);
+		delayed(5)(next); //call next() after 5 ms
 	};
 
 	F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,finalState){
-		console.log(finalState.output);
+		if(err)
+			console.log('Error: '+err);
+		else
+			console.log('Result: '+finalState.output);
 	});
 
 	// -> 'foofoofoo'

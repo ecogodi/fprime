@@ -47,6 +47,14 @@ F.onResultExit = function(){
         this.F.exit.apply(this,[err].concat(args));
 };
 
+F.ifFalseExit = function(err,bool,next){
+    if(err)
+        return this.F.exit(err);
+    if(!bool)
+        return this.F.exit(null,this);
+    next();
+}
+
 // ----------------------------------------------
 // Generators
 // ----------------------------------------------
@@ -73,32 +81,55 @@ F.result = function(res){
 }
 
 F.while = function(check, f){
-    var saveInput = function(input,next){
+    var saveInput = function(){
+        var args = Array.prototype.slice.call(arguments),
+            next = args.pop();
         if(!this._input)
-            this._input = input;
-        next(this._input);
+            this._input = args;
+        next.apply(this, this._input);
     }
     // user-provided check function
-    // check(next) -> (err,bool,next)
+    // check(input,next) -> (err,bool,next)
     // 
-    var ifFalseExit = function(err,bool,next){
-        if(!bool)
-            this.F.exit(null,this);
-        next(err);
-    }
-    var retrieveInput = function(err,next){
-        next(err,this._input);
+    // F.ifFalseExit
+    // 
+    var retrieveInput = function(next){
+        next.apply(this, this._input);
     }
     // user-provided looped function
-    // f(err,input,next) -> (err,next)
+    // f(input,next) -> (err,next)
     // 
     var loop = function(err,next){
         this.F.rewind();
         next();
     }
 
-    return F(saveInput,check,ifFalseExit,retrieveInput,f,loop).bind(this);
+    return F(saveInput,check,F.ifFalseExit,retrieveInput,f,loop).bind(this);
 };
+
+
+F.if = function(check, f){
+    var saveInput = function(){
+        var args = Array.prototype.slice.call(arguments),
+            next = args.pop();
+        if(!this._input)
+            this._input = args;
+        next.apply(this, this._input);
+    }
+    // user-provided check function
+    // check(input,next) -> (err,bool,next)
+    // 
+    // F.ifFalseExit
+    // 
+    var retrieveInput = function(next){
+        next.apply(this, this._input);
+    }
+    // user-provided function
+    // f(input,next) -> (err,next)
+    // 
+    return F(saveInput,check,F.ifFalseExit,retrieveInput,f).bind(this);
+};
+
 
 F.map = function(f){
     return function(){

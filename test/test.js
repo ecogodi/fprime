@@ -7,7 +7,7 @@ function debug(){
 	//console.log.apply(null,Array.prototype.slice.call(arguments));
 }
 
-function delayed(delay){
+function delayedResult(delay){
 	return function(result,cb){
 		setTimeout(function(result,cb){cb(null,result)}.bind(null,result,cb),delay);
 	}
@@ -19,7 +19,7 @@ function delayedErr(delay){
 	}
 }
 
-function delayedNoErr(delay){
+function delayed(delay){
 	return function(cb){
 		setTimeout(cb,delay);
 	}
@@ -30,7 +30,7 @@ function a(input,next){
 	if(input == 'please_err')
 		delayedErr(10)(next);
 	else
-		delayed(5)(input+'-a',next);
+		delayedResult(5)(input+'-a',next);
 }
 
 function s(input,next){
@@ -38,34 +38,34 @@ function s(input,next){
 	this.foo = 'bar';
 	this.parent.foo = 'baz'
 	
-	delayed(10)(input,next);
+	delayedResult(10)(input,next);
 }
 
 function b(input,next){
 	debug('b',input);
-	delayed(12)(input+'-b',next);
+	delayedResult(12)(input+'-b',next);
 }
 
 function c(input,next){
 	debug('c',input);
-	delayed(13)(input+'-c',next);
+	delayedResult(13)(input+'-c',next);
 }
 
 function d(input,next){
 	debug('d',input);
-	delayed(14)(input+'-d',next);
+	delayedResult(14)(input+'-d',next);
 }
 
 function p(input, next){
 	debug('p',input);
-	delayed(13)(input+'-p1', next.push());
-	delayed(15)(input+'-p2', next.push(2));
+	delayedResult(13)(input+'-p1', next.push());
+	delayedResult(15)(input+'-p2', next.push(2));
 }
 
 function pn(input, next){
 	debug('pn',input);
-	delayed(13)(input+'-pna',next.push('a'));
-	delayed(12)(input+'-pnb',next.push('b'));
+	delayedResult(13)(input+'-pna',next.push('a'));
+	delayedResult(12)(input+'-pnb',next.push('b'));
 }
 
 function pm(input, next){
@@ -77,7 +77,7 @@ function pm(input, next){
 
 function pe(input,next){
 	debug('pe',input);
-	delayed(15)(input+'-pe1',next.push());
+	delayedResult(15)(input+'-pe1',next.push());
 	delayedErr(12)(next.push());
 }
 
@@ -358,20 +358,75 @@ describe('F -> ', function(){
 		});
 	});
 
+	describe('"if" helper tests -> ', function(){
+
+		var checkTrue = function(input, next){
+			delayedResult(5)(true,next);
+		};
+		var checkFalse = function(input, next){
+			delayedResult(5)(false,next);
+		};
+		var checkErr = function(input, next){
+			delayedErr(5)(next);
+		};
+
+		it('test of a "if" helper (false)', function(done){
+			F.if(false, a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.ok(result,'state');
+			});
+		});
+
+		it('test of a "if" helper (truthy)', function(done){
+			F.if(1, a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.equal(result,'start-a', 'expected result');
+			});
+		});
+
+		it('test of a "if" helper (function returning true)', function(done){
+			F.if(checkTrue, a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.equal(result,'start-a', 'expected result');
+			});
+		});
+
+		it('test of a "if" helper (function returning false)', function(done){
+			F.if(checkFalse, a)('start',function(err,result){
+				done();
+				assert.notOk(err,'no error');
+				assert.ok(result,'state');
+			});
+		});
+
+		it('test of a "if" helper (function returning error)', function(done){
+			F.if(checkErr, a)('start',function(err,result){
+				done();
+				assert.equal(err,'err as requested');
+				assert.notOk(result,'no result');
+			});
+		});
+	});
+
 	describe('"while" helper tests -> ', function(){
 
 		var lessThanCount = function(input, next){
 			var check = !( (this.loopCount || 0) >= input.maxCount );
-			delayed(5)(check,next);
+			delayedResult(5)(check,next);
 		};
-
-		var myLoopedFunc = function(err,input,next){
+		var myLoopedFunc = function(input, next){
 			this.loopCount = (this.loopCount || 0) + 1;
 			this.output = (this.output || '') + 'foo';
-			delayedNoErr(5)(next);
+			delayed(5)(next);
+		};
+		var checkErr = function(input, next){
+			delayedErr(5)(next);
 		};
 
-		it('test of a "while" costruct augmentation (0)', function(done){
+		it('test of a "while" helper (0)', function(done){
 			F.while(lessThanCount, myLoopedFunc)({maxCount:0},function(err,state){
 				done();
 				assert.isUndefined(state.loopCount);
@@ -379,7 +434,7 @@ describe('F -> ', function(){
 			});
 		});
 
-		it('test of a "while" costruct augmentation (3)', function(done){
+		it('test of a "while" helper (3)', function(done){
 			F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,state){
 				done();
 				assert.equal(state.loopCount,3, 'expected result');
@@ -387,11 +442,19 @@ describe('F -> ', function(){
 			});
 		});
 
-		it('test of a "while" costruct augmentation (7)', function(done){
+		it('test of a "while" helper (7)', function(done){
 			F.while(lessThanCount, myLoopedFunc)({maxCount:7},function(err,state){
 				done();
 				assert.equal(state.loopCount,7, 'expected result');
 				assert.equal(state.output,'foofoofoofoofoofoofoo', 'expected result');
+			});
+		});
+
+		it('test of a "while" helper (error in check)', function(done){
+			F.while(checkErr, myLoopedFunc)({maxCount:7},function(err,result){
+				done();
+				assert.equal(err,'err as requested');
+				assert.notOk(result,'no result');
 			});
 		});
 	});
