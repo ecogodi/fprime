@@ -15,7 +15,7 @@ function delayedResult(delay){
 
 function delayedErr(delay){
 	return function(cb){
-		setTimeout(function(cb){cb('err as requested')}.bind(null,cb),delay);
+		setTimeout(function(cb){cb('error_message')}.bind(null,cb),delay);
 	}
 }
 
@@ -132,6 +132,15 @@ describe('F -> ', function(){
 			});
 		});
 
+		it('recycled sequence', function(done){
+			var ab = F(a,e,b);
+			F([ab])(['input',42],function(err,result){
+				done();
+				assert.deepEqual(err,{ '0': null, '1': null });
+				assert.deepEqual(result, { '0': 'input-a-b', '1': '42-a-b' });
+			});
+		});
+
 		it('sequence with nested saved state', function(done){
 			F(
 				F(s),e,
@@ -221,11 +230,39 @@ describe('F -> ', function(){
 				assert.isObject(err,'array-like error');
 				assert.lengthOf(Object.keys(err),2,'error length');
 				assert.notOk(err[0],'no error');
-				assert.equal(err[1],'err as requested', 'expected error');
+				assert.equal(err[1],'error_message', 'expected error');
 				assert.equal(result1,'start-a-pe1', 'expected result');
 				assert.notOk(result2,'expected null result');
 			});
 		});
+
+		it('result accumulation with sync calls', function(done){
+			F(
+				function(input,next){
+					delayedErr(30)(next.push('async'));
+					delayedResult(10)('aresult2',next.push('async2'));
+					next.push('sync')(null,'sresult');
+					next.push('sync2')(null,'sresult2');
+				}
+			)('start',function(err,result){
+				done();
+				assert.isObject(err,'array-like error');
+				assert.lengthOf(Object.keys(err),4,'error length');
+				assert.notOk(err['sync'],'no error');
+				assert.notOk(err['sync2'],'no error');
+				assert.notOk(err['async2'],'no error');
+				assert.equal(err['async'],'error_message','expected error');
+				assert.isObject(result,'array-like result');
+				assert.lengthOf(Object.keys(result),4,'result length');
+				assert.equal(result['sync'],'sresult', 'expected result');
+				assert.equal(result['sync2'],'sresult2', 'expected result');
+				assert.equal(result['async2'],'aresult2', 'expected result');
+				assert.notOk(result['async'],'no result');
+			});
+		});
+	});
+
+	describe('shorthand tests -> ', function(){
 
 		it('shorthand map over args', function(done){
 			F(
@@ -294,7 +331,7 @@ describe('F -> ', function(){
 
 	});
 	
-	describe('result helper tests -> ', function(){
+	describe('"result" helper tests -> ', function(){
 		
 		it('constant value', function(done){
 			F(F.result('myresult'),F.onErrorExit,a)('start',function(err,result){
@@ -318,7 +355,7 @@ describe('F -> ', function(){
 
 	});
 
-	describe('set helper tests -> ', function(){
+	describe('"set" helper tests -> ', function(){
 		it('set a state', function(done){
 			F(F.set({foo:'baz', bar:42}),a)('start',function(err,result){
 				done();
@@ -332,12 +369,12 @@ describe('F -> ', function(){
 	});
 
 
-	describe('exit helper tests -> ', function(){
+	describe('"exit" helper tests -> ', function(){
 		it('sequence with exit on error (exit)', function(done){
 			F(a,x,e,b)('please_err',function(err,result){
 				done();
 				assert.ok(err,'truthy error');
-				assert.equal(err,'err as requested', 'expected error');
+				assert.equal(err,'error_message', 'expected error');
 			});
 		});
 
@@ -405,7 +442,7 @@ describe('F -> ', function(){
 		it('test of a "if" helper (function returning error)', function(done){
 			F.if(checkErr, a)('start',function(err,result){
 				done();
-				assert.equal(err,'err as requested');
+				assert.equal(err,'error_message');
 				assert.notOk(result,'no result');
 			});
 		});
@@ -453,7 +490,7 @@ describe('F -> ', function(){
 		it('test of a "while" helper (error in check)', function(done){
 			F.while(checkErr, myLoopedFunc)({maxCount:7},function(err,result){
 				done();
-				assert.equal(err,'err as requested');
+				assert.equal(err,'error_message');
 				assert.notOk(result,'no result');
 			});
 		});
