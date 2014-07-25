@@ -136,7 +136,7 @@ describe('F -> ', function(){
 			var ab = F(a,e,b);
 			F([ab])(['input',42],function(err,result){
 				done();
-				assert.deepEqual(err,{ '0': null, '1': null });
+				assert.deepEqual(err,{});
 				assert.deepEqual(result, { '0': 'input-a-b', '1': '42-a-b' });
 			});
 		});
@@ -178,13 +178,7 @@ describe('F -> ', function(){
 				p
 			)('start',function(err,result1,result2,result3,result4){
 				done();
-				assert.isObject(err,'array-like error');
-				assert.isDefined(err[0],'error index was set');
-				assert.notOk(err[0],'no error');
-				assert.isUndefined(err[1],'error index was set');
-				assert.notOk(err[1],'no error');
-				assert.isDefined(err[2],'error index was set');
-				assert.notOk(err[2],'no error');
+				assert.deepEqual(err,{},'empty error');
 				assert.equal(result1,'start-a-p1', 'expected result');
 				assert.notOk(result2,'expected null');
 				assert.equal(result3,'start-a-p2', 'expected result');
@@ -197,10 +191,7 @@ describe('F -> ', function(){
 				pn,i
 			)('start',function(err,result){
 				done();
-				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),2,'error length');
-				assert.notOk(err['a'],'no error');
-				assert.notOk(err['b'],'no error');
+				assert.deepEqual(err,{},'empty error');
 				assert.isObject(result,'array-like result');
 				assert.lengthOf(Object.keys(result),2,'result length');
 				assert.equal(result['a'],'start-a-pna', 'expected result');
@@ -213,9 +204,7 @@ describe('F -> ', function(){
 				pm,i
 			)('start',function(err,result){
 				done();
-				assert.isObject(err,'array-like error');
-				assert.notOk(err['a'],'no error');
-				assert.notOk(err['b'],'no error');
+				assert.deepEqual(err,{},'empty error');
 				assert.isObject(result,'array-like result');
 				assert.equal(result['a'],'start-a-pma-b', 'expected result');
 				assert.equal(result['b'],'start-a-pmb-c-d', 'expected result');
@@ -228,7 +217,6 @@ describe('F -> ', function(){
 			)('start',function(err,result1,result2){
 				done();
 				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),2,'error length');
 				assert.notOk(err[0],'no error');
 				assert.equal(err[1],'error_message', 'expected error');
 				assert.equal(result1,'start-a-pe1', 'expected result');
@@ -247,7 +235,6 @@ describe('F -> ', function(){
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),4,'error length');
 				assert.notOk(err['sync'],'no error');
 				assert.notOk(err['sync2'],'no error');
 				assert.notOk(err['async2'],'no error');
@@ -271,10 +258,7 @@ describe('F -> ', function(){
 			)('start',function(err,resultb,resultc,resultd){
 				done();
 				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),3,'error length');
-				assert.notOk(err[0],'no error');
-				assert.notOk(err[1],'no error');
-				assert.notOk(err[2],'no error');
+				assert.lengthOf(Object.keys(err),0,'error length');
 				assert.equal(resultb,'start-a-b', 'expected result');
 				assert.equal(resultc,'const-d', 'expected result');
 				assert.equal(resultd,'8', 'expected result');
@@ -283,14 +267,11 @@ describe('F -> ', function(){
 
 		it('shorthand funcs apply', function(done){
 			F( a,e,
-				{'resultb':b,'resultc':c,'resultd':d,'foo':42}
+				{'resultb':b,'resultc':c,'resultd':d,'foo':F(42)}
 			)('start',function(err,result){
 				done();
 				assert.isObject(err,'array-like error');
-				assert.lengthOf(Object.keys(err),4,'error length');
-				assert.notOk(err.resultb,'no error');
-				assert.notOk(err.resultc,'no error');
-				assert.notOk(err.resultd,'no error');
+				assert.lengthOf(Object.keys(err),0,'error length');
 				assert.isObject(result,'array-like result');
 				assert.lengthOf(Object.keys(result),4,'result length');
 				assert.equal(result.resultb,'start-a-b', 'expected result');
@@ -499,17 +480,17 @@ describe('F -> ', function(){
 
 	describe('augmentation tests -> ', function(){
 		beforeEach(function(){
-			var myAugments = {
-				'jumpWithArgs':{
+			var myAugment = 
+				{
+					name: 'jumpWithArgs',
 					type: 'stateF',
 					f: function(c,array){
 						this.setNextStepId(c+1);
 						this.runOneStep(c,array);
 					}
-				}
-			};
+				};
 
-			F.augment(myAugments);
+			F.augment(myAugment);
 		});
 
 		it('sequence using jump augmentation', function(done){

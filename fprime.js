@@ -139,7 +139,9 @@ F.map = function(f){
         if(iterable && f){
             for(var i in iterable){
                 if(iterable.hasOwnProperty(i)){
-                    F(f).bind(this)( iterable[i], next.push(''+i) );
+                    if(typeof f !== 'function')
+                        f = F(f);
+                    f.bind(this)( iterable[i], next.push(''+i) );
                 }
             }
         }
@@ -154,8 +156,13 @@ F.mapArgs = function(){
         var args = Array.prototype.slice.call(arguments),
             next = args.pop();
         for(var p in parallelSteps){
-            if(parallelSteps[p]!==undefined)
-                F(parallelSteps[p]).bind(this)( args[p], next.push() );
+            var f;
+            if(typeof parallelSteps[p] === 'function')
+                f = parallelSteps[p];
+            else if(parallelSteps[p]!==undefined)
+                f = F(parallelSteps[p]);
+            if(f)
+                f.bind(this)( args[p], next.push() );
         }
     };
 }
@@ -165,15 +172,21 @@ F.applyFuncs = function(parallelSteps){
         var args = Array.prototype.slice.call(arguments),
             next = args.pop();
         for(var p in parallelSteps){
-            if(parallelSteps[p]!==undefined)
-                F(parallelSteps[p]).apply( this, args.concat(next.push(p)) );
+            var f;
+            if(typeof parallelSteps[p] === 'function')
+                f = parallelSteps[p];
+            else if(parallelSteps[p]!==undefined)
+                f = F(parallelSteps[p]);
+            if(f)
+                f.apply( this, args.concat(next.push(p)) );
         }
     };
 }
 
 // a few short notations for common operators, added as augmentation:
-var shorthands = {};
-shorthands.shorthand_array = {
+var shorthands = [];
+shorthands.push({
+    name: 'shorthand_array',
     type: 'stepFilter',
     f: function(step){
         if(step instanceof Array){
@@ -189,8 +202,9 @@ shorthands.shorthand_array = {
         return step;
     },
     options: {order: 10}
-};
-shorthands.shorthand_object = {
+});
+shorthands.push({
+    name: 'shorthand_object',
     type: 'stepFilter',
     f: function(step){
         if(typeof step === 'object'){
@@ -200,8 +214,9 @@ shorthands.shorthand_object = {
         return step;
     },
     options: {order: 20}
-};
-shorthands.shorthand_value = {
+});
+shorthands.push({
+    name: 'shorthand_value',
     type: 'stepFilter',
     f: function(step){
         if(typeof step !== 'function'){
@@ -211,7 +226,7 @@ shorthands.shorthand_value = {
         return step;
     },
     options: {order: 99}
-};
+});
 F.augment(shorthands);
 
 if (typeof module.exports !== "undefined") {
