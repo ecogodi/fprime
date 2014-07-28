@@ -1,6 +1,6 @@
 {
   "name": "fprime",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "An async sequences execution library. It has a very simple core, but is instrumented to add more complex flow control features.",
   "author": "Elia Cogodi <elia.cogodi@gmail.com>",
   "main": "fprime.js",

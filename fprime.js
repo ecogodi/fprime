@@ -150,7 +150,7 @@ F.map = function(f){
     }
 }
 
-F.mapArgs = function(){
+F.parallelArgs = function(){
     var parallelSteps = Array.prototype.slice.call(arguments);
     return function(){
         var args = Array.prototype.slice.call(arguments),
@@ -167,7 +167,7 @@ F.mapArgs = function(){
     };
 }
 
-F.applyFuncs = function(parallelSteps){
+F.parallel = function(parallelSteps){
     return function(){
         var args = Array.prototype.slice.call(arguments),
             next = args.pop();
@@ -193,7 +193,7 @@ shorthands.push({
             var stepArray = step;
 
             if(step.length>1){
-                step = F.mapArgs.apply(this, stepArray);
+                step = F.parallelArgs.apply(this, stepArray);
             }
             else if(step.length==1){
                 step = F.map(stepArray[0]);
@@ -209,7 +209,7 @@ shorthands.push({
     f: function(step){
         if(typeof step === 'object'){
             var stepMap = step;
-            step = F.applyFuncs(stepMap);
+            step = F.parallel(stepMap);
         }
         return step;
     },

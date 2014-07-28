@@ -251,7 +251,7 @@ describe('F -> ', function(){
 
 	describe('shorthand tests -> ', function(){
 
-		it('shorthand map over args', function(done){
+		it('shorthand parallel over args', function(done){
 			F(
 				[a,'const',42],
 				[,b,d,8]
@@ -265,7 +265,7 @@ describe('F -> ', function(){
 			});
 		});
 
-		it('shorthand funcs apply', function(done){
+		it('shorthand parallel', function(done){
 			F( a,e,
 				{'resultb':b,'resultc':c,'resultd':d,'foo':F(42)}
 			)('start',function(err,result){

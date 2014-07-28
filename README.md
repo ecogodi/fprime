@@ -211,21 +211,7 @@ A few shorthand notations are implemented in **F'** as augmentations:
 ```
 This notation makes use of the [`F.map` helper][fmap], see later
 
-##### Map functions over arguments
-
-```javascript
-	
-	F(
-		a,
-		[,b,,c]
-	)( ... , finalCb);
-    
-    // b is applied to the second argument with which a called next, c to the fourth;
-    // they are called in parallel with `next-push()` 
-```
-This notation makes use of the [`F.mapArgs` helper][fmapargs], see later
-
-##### Apply map of functions
+##### Parallel execution of functions
 
 ```javascript
 	
@@ -237,7 +223,21 @@ This notation makes use of the [`F.mapArgs` helper][fmapargs], see later
     // b,c are called in parallel with keys 'first', 'second'; 
     // both are fed all the arguments passed to the step from a
 ```
-This notation makes use of the [`F.applyFuncs` helper][fapplyfuncs], see later
+This notation makes use of the [`F.parallel` helper][fparallel], see later
+
+##### Parallel execution over arguments
+
+```javascript
+	
+	F(
+		a,
+		[,b,,c]
+	)( ... , finalCb);
+    
+    // b is applied to the second argument with which a called next, c to the fourth;
+    // they are called in parallel with `next-push()` 
+```
+This notation makes use of the [`F.parallelArgs` helper][fparallelargs], see later
 
 ##### Value steps
 
@@ -300,11 +300,11 @@ Given an object, this helper generates a step that sets on the sequence state al
 ##### F.map( func )
 Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as parallel key.
 
-##### F.mapArgs( [func1], [func2], ...)
-Given n (async) functions, this helper generates a step that applies each function in order to the received arguments. Undefined places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
+##### F.parallel( {key1:func1, ...} | [[func1, ...]] )
+Given a map or array of functions, this helper generates a step that executes all of them in parallel with the input arguments received. The function map keys or array indexes are used as parallel execution keys.
 
-##### F.applyFuncs( { key1:func1 ... } )
-Given a map of functions, this helper generates a step that executes all of them in parallel over the input arguments received. The function map keys are used as parallel execution keys.
+##### F.parallelArgs( [func1], [func2], ... )
+Given n (async) functions, this helper generates a step that applies each function in order to the received arguments. Undefined places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
 
 ##### F.if( checkFunc, func )
 Given an (async) check function returning a boolean and an (async) function, this helper generates a sequence that calls `func` with the given sequence arguments only if the checkFunc returns a truthy result.
@@ -348,10 +348,10 @@ TODO: documentation (see F' code and tests for examples)
 
 -------------------------------------------------------------------------
 
-[needmore]:    #if-you-need-more-hint-you-will
-[fonerrorexit]:#fonerrorexiterr-results-cb
-[fresult]:     #fresultfunc--value
-[fmap]:        #fmapf
-[fmapargs]:    #fmapargsfunc1-func2-
-[fapplyfuncs]: #fapplyfuncs--key1func1---
-[augments]:    #augmentations
+[needmore]:      #if-you-need-more-hint-you-will
+[fonerrorexit]:  #fonerrorexiterr-results-cb
+[fresult]:       #fresultfunc--value
+[fmap]:          #fmapf
+[fparallelargs]: #fparallelargs-func1-func2--
+[fparallel]:     #fparallel-key1func1---func1--
+[augments]:      #augmentations
