@@ -180,15 +180,15 @@ A child sequence has a reference to the state of its parent in the state propert
 
 ```javascript
 
-	var exitGrandparent = function(in,next){
+	var exitGrandparent = function(input,next){
 		...
-		this.parent.F.exit(null,out);
+		this.parent.parent.F.exit(null,out);
 	}
 			
 	F(
 		a,b,
 		F(c,d,F(e,exitGrandparent)),
-		f,g,h
+		x,y
 	)( ... , finalCb);
     
     // will execute a,b,c,d,e then exit by calling finalCb(null,out)
@@ -291,7 +291,22 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 #### Generators
 
 ##### F.result( func | value )
-Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync result.  
+Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync. result.  
+
+```javascript
+	
+	var syncFunc = function(){ return 40 +2 };
+
+	var mySeq = F(
+		F.result(syncFunc)
+	);
+
+	mySeq(null, console.log);
+
+	// -> null 42 
+
+```
+
 If a constant value is given instead of a function, that value is passed to next as the step result.
 
 ##### F.set( object )

@@ -26,7 +26,7 @@ function delayed(delay){
 }
 
 function a(input,next){
-	debug('a',input);
+	debug('a:',input);
 	if(input == 'please_err')
 		delayedErr(10)(next);
 	else
@@ -34,7 +34,7 @@ function a(input,next){
 }
 
 function s(input,next){
-	debug('s',input);
+	debug('s:',input);
 	this.foo = 'bar';
 	this.parent.foo = 'baz'
 	
@@ -42,52 +42,52 @@ function s(input,next){
 }
 
 function b(input,next){
-	debug('b',input);
+	debug('b:',input);
 	delayedResult(12)(input+'-b',next);
 }
 
 function c(input,next){
-	debug('c',input);
+	debug('c:',input);
 	delayedResult(13)(input+'-c',next);
 }
 
 function d(input,next){
-	debug('d',input);
+	debug('d:',input);
 	delayedResult(14)(input+'-d',next);
 }
 
 function p(input, next){
-	debug('p',input);
+	debug('p:',input);
 	delayedResult(13)(input+'-p1', next.push());
 	delayedResult(15)(input+'-p2', next.push(2));
 }
 
 function pn(input, next){
-	debug('pn',input);
+	debug('pn:',input);
 	delayedResult(13)(input+'-pna',next.push('a'));
 	delayedResult(12)(input+'-pnb',next.push('b'));
 }
 
 function pm(input, next){
-	debug('pm',input);
+	debug('pm:',input);
 
 	F(b)(input+'-pma',next.push('a'));
 	F(c,e,d)(input+'-pmb',next.push('b'));
 }
 
 function pe(input,next){
-	debug('pe',input);
+	debug('pe:',input);
 	delayedResult(15)(input+'-pe1',next.push());
 	delayedErr(12)(next.push());
 }
 
 function x(err,input,next){
-	debug('x',err,input);
+	debug('x:',err,input);
 	next(err,'x0',input+'-x');
 }
 
 function y(input0,input1,next){
-	debug('y',input0,input1);
+	debug('y:',input0,input1);
 	next(input1+'-y');
 }
 
