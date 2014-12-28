@@ -11,7 +11,8 @@
   "author": "Elia Cogodi <elia.cogodi@gmail.com>",
   "main": "fprime.js",
   "scripts": {
-    "test": "mocha -R spec"
+    "test": "mocha -R spec",
+    "posttest": "sh test/coverage.sh"
   },
   "repository": {
     "type": "git",
