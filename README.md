@@ -2,6 +2,7 @@ F'
 ====
 
 [![Build Status](https://travis-ci.org/ecogodi/fprime.svg)](https://travis-ci.org/ecogodi/fprime)
+[![Coverage Status](https://img.shields.io/coveralls/ecogodi/fprime.svg)](https://coveralls.io/r/ecogodi/fprime)
 
 **F'** - or _F prime_ - is another asynchronous flow control library for javascript. 
 It has a very simple core, but is instrumented to add more complex, customized constructs. 

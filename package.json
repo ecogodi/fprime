@@ -20,6 +20,8 @@
   "license": "LGPL-2.0+",
   "devDependencies": {
     "chai": "^1.9.1",
-    "mocha": "^1.20.1"
+    "mocha": "^1.20.1",
+    "coveralls": "~2.11.2",
+    "mocha-lcov-reporter": "0.0.1"
   }
 }
