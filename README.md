@@ -1,6 +1,8 @@
 F'
 ====
 
+[![Build Status](https://travis-ci.org/ecogodi/fprime.svg)](https://travis-ci.org/ecogodi/fprime)
+
 **F'** - or _F prime_ - is another asynchronous flow control library for javascript. 
 It has a very simple core, but is instrumented to add more complex, customized constructs. 
 For reasons clarified [later][needmore], it will also be referred to as simply **F**.
@@ -10,19 +12,19 @@ For reasons clarified [later][needmore], it will also be referred to as simply *
 ```javascript
 
     var mySeq = F(
-		fs.readFile,
-		F.onErrorExit, // an helper function, see later
-		function capitalize(text, next){
-			next(text.toString().toUpperCase());
-		}
-	);
+        fs.readFile,
+        F.onErrorExit, // an helper function, see later
+        function capitalize(text, next){
+            next(text.toString().toUpperCase());
+        }
+    );
 
     mySeq(__filename,function(err, newUpText) {
-	    if (err) 
-	    	throw(err);
-	    else
-	    	console.log(newUpText);
-	}
+        if (err) 
+            throw(err);
+        else
+            console.log(newUpText);
+    }
 
 ```
 
@@ -39,18 +41,18 @@ The module exports a single function. Call this function with a sequence of step
 ```javascript
 
     var mySeq = F(
-    	function a(input, next){ 
-    		var out1 = input,
-    			out2 = 'baz' + input;
-    		// next must be called 'manually' or passed 
+        function a(input, next){ 
+            var out1 = input,
+                out2 = 'baz' + input;
+            // next must be called 'manually' or passed 
             // as completion callback of an async.
              procedure
-    		next(null, out1, out2); 
-    	},
-    	function b(err, arg1, arg2, next){
-    		var out = arg1 + arg2; 
-    		next(null, out, 42); // last step, this will call the sequence final callback
-    	}
+            next(null, out1, out2); 
+        },
+        function b(err, arg1, arg2, next){
+            var out = arg1 + arg2; 
+            next(null, out, 42); // last step, this will call the sequence final callback
+        }
     );
 
 ```
@@ -59,7 +61,7 @@ The step functions are assumed to follow node conventions, i.e. to be in the for
 
 ```javascript
 
-	mySeq('foo',function(err, result1, result2){
+    mySeq('foo',function(err, result1, result2){
         console.log(result1, result2);
     })
     // -> foobazfoo 42
@@ -79,21 +81,21 @@ All step functions are bound by **F** to a context where information can be kept
 
 ```javascript
 
-	var mySeq = F(
-		function save(filename, next){
-			// we store something in the sequence state
-			this.filename = filename; 
-			fs.readFile(filename,{encoding:'utf8'},next);
-		},
-		function capitalize(err, text, next){
-			next(text.toUpperCase());
-		},
-		function format(newText, next){
-			// we retrieve from the sequence state
-			var snippet = this.filename+': '+newText.substr(0,20);
-			next(null,snippet);
-		}
-	);
+    var mySeq = F(
+        function save(filename, next){
+            // we store something in the sequence state
+            this.filename = filename; 
+            fs.readFile(filename,{encoding:'utf8'},next);
+        },
+        function capitalize(err, text, next){
+            next(text.toUpperCase());
+        },
+        function format(newText, next){
+            // we retrieve from the sequence state
+            var snippet = this.filename+': '+newText.substr(0,20);
+            next(null,snippet);
+        }
+    );
 
 ```
 
@@ -135,17 +137,17 @@ Alternatively you can explicitely provide keys in `next.push`, to get "named" pa
 
 ```javascript
 
-	var myPrlSeq2 = F(
-    	fs.readdir,
-    	function b(err, filenames, next){
-    		if(err)
-    			return next(err);
+    var myPrlSeq2 = F(
+        fs.readdir,
+        function b(err, filenames, next){
+            if(err)
+                return next(err);
             for(var i in filenames)
-    		  fs.stat(__dirname+'/'+filenames[i], next.push(filenames[i]));
-    	}
+              fs.stat(__dirname+'/'+filenames[i], next.push(filenames[i]));
+        }
     );
 
-	myPrlSeq2(__dirname, console.log);
+    myPrlSeq2(__dirname, console.log);
     
 ```
 
@@ -180,16 +182,16 @@ A child sequence has a reference to the state of its parent in the state propert
 
 ```javascript
 
-	var exitGrandparent = function(input,next){
-		...
-		this.parent.parent.F.exit(null,out);
-	}
-			
-	F(
-		a,b,
-		F(c,d,F(e,exitGrandparent)),
-		x,y
-	)( ... , finalCb);
+    var exitGrandparent = function(input,next){
+        ...
+        this.parent.parent.F.exit(null,out);
+    }
+            
+    F(
+        a,b,
+        F(c,d,F(e,exitGrandparent)),
+        x,y
+    )( ... , finalCb);
     
     // will execute a,b,c,d,e then exit by calling finalCb(null,out)
 ```
@@ -200,11 +202,11 @@ A few shorthand notations are implemented in **F'** as augmentations:
 ##### Map function over iterable
 
 ```javascript
-	
-	F(
-		a,
-		[b]
-	)( ... , finalCb);
+    
+    F(
+        a,
+        [b]
+    )( ... , finalCb);
     
     // b is called in parallel iterating over all properties of the first argument
     // with which a called next; each parallel is called with the key of iteration
@@ -214,11 +216,11 @@ This notation makes use of the [`F.map` helper][fmap], see later
 ##### Parallel execution of functions
 
 ```javascript
-	
-	F(
-		a,
-		{ first:b, second:c }
-	)( ... , finalCb);
+    
+    F(
+        a,
+        { first:b, second:c }
+    )( ... , finalCb);
     
     // b,c are called in parallel with keys 'first', 'second'; 
     // both are fed all the arguments passed to the step from a
@@ -228,11 +230,11 @@ This notation makes use of the [`F.parallel` helper][fparallel], see later
 ##### Parallel execution over arguments
 
 ```javascript
-	
-	F(
-		a,
-		[,b,,c]
-	)( ... , finalCb);
+    
+    F(
+        a,
+        [,b,,c]
+    )( ... , finalCb);
     
     // b is applied to the second argument with which a called next, c to the fourth;
     // they are called in parallel with `next-push()` 
@@ -242,10 +244,10 @@ This notation makes use of the [`F.parallelArgs` helper][fparallelargs], see lat
 ##### Value steps
 
 ```javascript
-	
-	F(
-		42,a
-	)( ... , finalCb);
+    
+    F(
+        42,a
+    )( ... , finalCb);
     
     // a non-function step of given value is replaced by `next(null, value)`
 ```
@@ -255,16 +257,16 @@ This notation makes use of the [`F.result` helper][fresult], see later. Nota ben
 Compact notations _can_ be nested:
 
 ```javascript
-	
-	F(
-		a,
-		[,{map:[b], c:c}]
-	)( ... , console.log);
+    
+    F(
+        a,
+        [,{map:[b], c:c}]
+    )( ... , console.log);
 
-	// -> { 
-	//	'0': { '0': { map: [Object], c: null } },
-	//	'1': { map: <mapresult>, c: <cresult>} 
-	// }
+    // -> { 
+    //  '0': { '0': { map: [Object], c: null } },
+    //  '1': { map: <mapresult>, c: <cresult>} 
+    // }
 
 ```
 This sequence will
@@ -294,16 +296,16 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync. result.  
 
 ```javascript
-	
-	var syncFunc = function(){ return 40 +2 };
+    
+    var syncFunc = function(){ return 40 +2 };
 
-	var mySeq = F(
-		F.result(syncFunc)
-	);
+    var mySeq = F(
+        F.result(syncFunc)
+    );
 
-	mySeq(null, console.log);
+    mySeq(null, console.log);
 
-	// -> null 42 
+    // -> null 42 
 
 ```
 
@@ -334,27 +336,29 @@ Note that the input fed to the sequence is passed as arguments to both the check
 
 ```javascript
 
-	var lessThanCount = function(input, next){
-		var check = !( (this.loopCount || 0) >= input.maxCount );
+    var lessThanCount = function(input, next){
+        var check = !( (this.loopCount || 0) >= input.maxCount );
 
-		delayedResult(5)(check,next); //call next(null,check) after 5 ms
-	};
+        delayedResult(5)(check,next); //call next(null,check) after 5 ms
+    };
 
-	var myLoopedFunc = function(input,next){
-		this.loopCount = (this.loopCount || 0) + 1;
-		this.output = (this.output || '') + 'foo';
+    var myLoopedFunc = function(input,next){
+        this.loopCount = (this.loopCount || 0) + 1;
+        this.output = (this.output || '') + 'foo';
 
-		delayed(5)(next); //call next() after 5 ms
-	};
+        delayed(5)(next); //call next() after 5 ms
+    };
 
-	F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,finalState){
-		if(err)
-			console.log('Error: '+err);
-		else
-			console.log('Result: '+finalState.output);
-	});
+    var finalCb = function(err,finalState){
+        if(err)
+            console.log('Error: '+err);
+        else
+            console.log('Result: '+finalState.output);
+    };
 
-	// -> 'foofoofoo'
+    F.while(lessThanCount, myLoopedFunc)( {maxCount:3}, finalCb );
+
+    // -> 'Result: foofoofoo'
 
 ```
 ### Augmentations
@@ -366,7 +370,7 @@ TODO: documentation (see F' code and tests for examples)
 [needmore]:      #if-you-need-more-hint-you-will
 [fonerrorexit]:  #fonerrorexiterr-results-cb
 [fresult]:       #fresultfunc--value
-[fmap]:          #fmapf
+[fmap]:          #fmap-func-
 [fparallelargs]: #fparallelargs-func1-func2--
 [fparallel]:     #fparallel-key1func1---func1--
 [augments]:      #augmentations
