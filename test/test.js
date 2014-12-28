@@ -1,8 +1,6 @@
-console.log(process.env.TESTMODE);
-
 var chai = require('chai');
 var assert = chai.assert;
-var F = process.env.TESTMODE==='COVERAGE' ? require('../cov/fprime.js') : require('..');
+var F = process.env.TESTMODE==='COVERAGE' ? require('./cov/fprime.js') : require('..');
 var utils = require('./testutils.js');
 
 function a(input,next){
