@@ -1,98 +1,78 @@
+console.log(process.env.TESTMODE);
+
 var chai = require('chai');
 var assert = chai.assert;
-var F = require('..');
-
-
-function debug(){
-	//console.log.apply(null,Array.prototype.slice.call(arguments));
-}
-
-function delayedResult(delay){
-	return function(result,cb){
-		setTimeout(function(result,cb){cb(null,result)}.bind(null,result,cb),delay);
-	}
-}
-
-function delayedErr(delay){
-	return function(cb){
-		setTimeout(function(cb){cb('error_message')}.bind(null,cb),delay);
-	}
-}
-
-function delayed(delay){
-	return function(cb){
-		setTimeout(cb,delay);
-	}
-}
+var F = process.env.TESTMODE==='COVERAGE' ? require('../cov/fprime.js') : require('..');
+var utils = require('./testutils.js');
 
 function a(input,next){
-	debug('a:',input);
+	utils.debug('a:',input);
 	if(input == 'please_err')
-		delayedErr(10)(next);
+		utils.delayedErr(10)(next);
 	else
-		delayedResult(5)(input+'-a',next);
+		utils.delayedResult(5)(input+'-a',next);
 }
 
 function s(input,next){
-	debug('s:',input);
+	utils.debug('s:',input);
 	this.foo = 'bar';
 	this.parent.foo = 'baz'
 	
-	delayedResult(10)(input,next);
+	utils.delayedResult(10)(input,next);
 }
 
 function b(input,next){
-	debug('b:',input);
-	delayedResult(12)(input+'-b',next);
+	utils.debug('b:',input);
+	utils.delayedResult(12)(input+'-b',next);
 }
 
 function c(input,next){
-	debug('c:',input);
-	delayedResult(13)(input+'-c',next);
+	utils.debug('c:',input);
+	utils.delayedResult(13)(input+'-c',next);
 }
 
 function d(input,next){
-	debug('d:',input);
-	delayedResult(14)(input+'-d',next);
+	utils.debug('d:',input);
+	utils.delayedResult(14)(input+'-d',next);
 }
 
 function p(input, next){
-	debug('p:',input);
-	delayedResult(13)(input+'-p1', next.push());
-	delayedResult(15)(input+'-p2', next.push(2));
+	utils.debug('p:',input);
+	utils.delayedResult(13)(input+'-p1', next.push());
+	utils.delayedResult(15)(input+'-p2', next.push(2));
 }
 
 function pn(input, next){
-	debug('pn:',input);
-	delayedResult(13)(input+'-pna',next.push('a'));
-	delayedResult(12)(input+'-pnb',next.push('b'));
+	utils.debug('pn:',input);
+	utils.delayedResult(13)(input+'-pna',next.push('a'));
+	utils.delayedResult(12)(input+'-pnb',next.push('b'));
 }
 
 function pm(input, next){
-	debug('pm:',input);
+	utils.debug('pm:',input);
 
 	F(b)(input+'-pma',next.push('a'));
 	F(c,e,d)(input+'-pmb',next.push('b'));
 }
 
 function pe(input,next){
-	debug('pe:',input);
-	delayedResult(15)(input+'-pe1',next.push());
-	delayedErr(12)(next.push());
+	utils.debug('pe:',input);
+	utils.delayedResult(15)(input+'-pe1',next.push());
+	utils.delayedErr(12)(next.push());
 }
 
 function x(err,input,next){
-	debug('x:',err,input);
+	utils.debug('x:',err,input);
 	next(err,'x0',input+'-x');
 }
 
 function y(input0,input1,next){
-	debug('y:',input0,input1);
+	utils.debug('y:',input0,input1);
 	next(input1+'-y');
 }
 
 function i(err,result,next){
-	debug('i:', arguments);
+	utils.debug('i:', arguments);
 	next(err,result);
 }
 
@@ -227,8 +207,8 @@ describe('F -> ', function(){
 		it('result accumulation with sync calls', function(done){
 			F(
 				function(input,next){
-					delayedErr(30)(next.push('async'));
-					delayedResult(10)('aresult2',next.push('async2'));
+					utils.delayedErr(30)(next.push('async'));
+					utils.delayedResult(10)('aresult2',next.push('async2'));
 					next.push('sync')(null,'sresult');
 					next.push('sync2')(null,'sresult2');
 				}
@@ -379,13 +359,13 @@ describe('F -> ', function(){
 	describe('"if" helper tests -> ', function(){
 
 		var checkTrue = function(input, next){
-			delayedResult(5)(true,next);
+			utils.delayedResult(5)(true,next);
 		};
 		var checkFalse = function(input, next){
-			delayedResult(5)(false,next);
+			utils.delayedResult(5)(false,next);
 		};
 		var checkErr = function(input, next){
-			delayedErr(5)(next);
+			utils.delayedErr(5)(next);
 		};
 
 		it('test of a "if" helper (false)', function(done){
@@ -433,15 +413,15 @@ describe('F -> ', function(){
 
 		var lessThanCount = function(input, next){
 			var check = !( (this.loopCount || 0) >= input.maxCount );
-			delayedResult(5)(check,next);
+			utils.delayedResult(5)(check,next);
 		};
 		var myLoopedFunc = function(input, next){
 			this.loopCount = (this.loopCount || 0) + 1;
 			this.output = (this.output || '') + 'foo';
-			delayed(5)(next);
+			utils.delayed(5)(next);
 		};
 		var checkErr = function(input, next){
-			delayedErr(5)(next);
+			utils.delayedErr(5)(next);
 		};
 
 		it('test of a "while" helper (0)', function(done){

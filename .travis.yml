@@ -2,5 +2,6 @@ language: node_js
 node_js:
   - "0.10"
 after_success:
-  - ./node_modules/.bin/jscoverage lib lib-cov
-  - ./node_modules/.bin/mocha -R mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
+  - ./node_modules/.bin/jscoverage lib cov/lib
+  - ./node_modules/.bin/jscoverage fprime.js cov/fprime.js
+  - env TESTMODE=COVERAGE ./node_modules/.bin/mocha -R mocha-lcov-reporter | ./node_modules/coveralls/bin/coveralls.js
