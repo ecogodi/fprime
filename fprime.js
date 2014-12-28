@@ -15,9 +15,9 @@
 
         if(!err)
             next.apply(this,args);
-        else if(err instanceof Array){
-            for(var i in err){
-                if(err[i]){
+        else if(typeof err === 'object'){
+            for(var prop in err) {
+                if(err.hasOwnProperty(prop)){
                     this.F.exit(err);
                     return;
                 }
@@ -76,7 +76,15 @@
         return function(){
             var args = Array.prototype.slice.call(arguments),
                 next = args.pop(),
-                value = typeof r == 'function' ? r.apply(this,args) : r;
+                value = r;
+            
+            if(typeof r == 'function'){
+                try{
+                    value = r.apply(this,args);
+                } catch (e){
+                    return next(e,null);
+                }
+            }
             next(null,value);
         }
     }
@@ -173,13 +181,18 @@
             var args = Array.prototype.slice.call(arguments),
                 next = args.pop();
             for(var p in parallelSteps){
+                if(!isNaN(p))
+                    nk = parseInt(p,10);
+                else
+                    nk = p;
+
                 var f;
                 if(typeof parallelSteps[p] === 'function')
                     f = parallelSteps[p];
                 else if(parallelSteps[p]!==undefined)
                     f = F(parallelSteps[p]);
                 if(f)
-                    f.apply( this, args.concat(next.push(p)) );
+                    f.apply( this, args.concat(next.push(nk)) );
             }
         };
     }

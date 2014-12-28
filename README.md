@@ -313,10 +313,48 @@ Given a function, this helper generates a step that executes the function _synch
 If a constant value is given instead of a function, that value is passed to next as the step result.
 
 ##### F.set( object )
-Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all argument to the following step.
+Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all received argument to the following step.
+
+```javascript
+    
+    var mySeq = F(
+        function(string,next){
+            next(null, 'processed ' + string);
+        },
+        F.set({foo:'baz', bar:42})
+    )
+
+    mySeq('input',function(err,result){
+        console.log(err,result,this.foo,this.bar);
+    });
+
+    // -> null 'processed input' 'baz' 42
+```
 
 ##### F.map( func )
-Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as parallel key.
+Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as the parallel key.
+
+```javascript
+    
+    var mySeq = F(
+        F.map(fs.readFile),
+        function(err, data, next){
+            var sizes = {};
+            for(d in data){
+                if(!err[d])
+                    sizes[d] = data[d].length;
+            }
+            next(err,sizes);
+        }
+    )
+
+    mySeq({
+        'first file':'existing_file.js', 
+        'second file':'not_existing_file.js',
+    },console.log);
+
+    // -> (e.g.) { 'second file': { [Error: ENOENT, open 'not_existing_file.js'] errno: 34, code: 'ENOENT', path: 'not_existing_file.js' } } { 'first file': 663 }
+```
 
 ##### F.parallel( {key1:func1, ...} | [[func1, ...]] )
 Given a map or array of functions, this helper generates a step that executes all of them in parallel with the input arguments received. The function map keys or array indexes are used as parallel execution keys.
@@ -331,19 +369,21 @@ Given an (async) check function returning a boolean and an (async) function, thi
 Given an (async) check function returning a boolean and an (async) loop function, this helper generates a sequence that:
 
 1. each time the check function returns true, executes the looped function
-2. when the check function return false or error, the sequence is exited. The final callback is called with the error, if any,  and the sequence state as result
+2. when the check function return false or error, the sequence is exited. The final callback is called with the error, if any, and the _sequence state_ as result
 
-Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to change the _state_ of execution so that the sequence eventually ends.
+Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to change the _state_ of execution or an external resource so that eventaully the check function returns false and the sequence ends.
 
 ```javascript
 
     var lessThanCount = function(input, next){
+        // we e.g. check the execution state against an initial input parameter
         var check = !( (this.loopCount || 0) >= input.maxCount );
 
         delayedResult(5)(check,next); //call next(null,check) after 5 ms
     };
 
     var myLoopedFunc = function(input,next){
+        // we're not actually using the initial input here, but we could
         this.loopCount = (this.loopCount || 0) + 1;
         this.output = (this.output || '') + 'foo';
 
