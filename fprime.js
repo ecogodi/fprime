@@ -10,8 +10,8 @@
 
     F.onErrorExit = function(){
         var args = Array.prototype.slice.call(arguments);
-        var err = args.shift();
         var next = args.pop();
+        var err = args.shift();
 
         if(!err)
             next.apply(this,args);
@@ -30,8 +30,8 @@
 
     F.onResultExit = function(){
         var args = Array.prototype.slice.call(arguments);
-        var err = args.shift();
         var next = args.pop();
+        var err = args.shift();
 
         if(!args)
             next();
@@ -50,9 +50,9 @@
 
     F.ifFalseExit = function(){
         var args  = Array.prototype.slice.call(arguments);
+        var next  = args.pop();
         var err   = args.shift();
         var check = args.shift();
-        var next  = args.pop();
 
         if(err)
             return this.F.exit(err);
