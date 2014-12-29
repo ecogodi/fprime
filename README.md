@@ -100,6 +100,8 @@ All step functions are bound by **F** to a context where information can be kept
 
 ```
 
+The final callback is also called bound to this context.
+
 ### Parallelization
 Parallel execution is supported through the use of the `next.push()` method attached to the injected next function. This method takes an optional key (see later) and _generates_ a special _parallel next_ function. As with the usual next, it can be called manually or used as an async procedure callback.
 Only after completion of all parallel executions the grouped errors and results are forwarded to next step.
@@ -170,7 +172,7 @@ Slightly less basic use
 The context of step execution, that is the sequence "state", comes populated with a namespace, **F**, containing utility methods available to step functions.
 
 #### this.F.exit(err, result)
-Exits the current sequence by immediatly executing the final sequence callback with given error and result.
+Exits the current sequence by immediatly executing the final sequence callback with given error and result. As usual, the sequence state is available to the final callback as binding context.
 
 #### this.F.rewind()
 Resets the current sequence, so that `next` actually points to the first step. The sequence state, though, is preserved for the next loop. 
@@ -285,16 +287,22 @@ You might have noticed that the main entry point for the package is not the core
 Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences. 
 
 #### Steps
+
 ##### F.onErrorExit(err, results..., cb)
-This helper _step_ function will exit the sequence if it is fed a non-null error (or a map containing a non-null error). if no error was passed, it will forward _only_ the remaining result args to the next step. Useful as an adapter for pre-made functions that  take no error as an argument.
+This helper _step_ function will exit the sequence if it is fed a non-null error (or a map containing a non-null error). if no error was passed, it will forward _only_ the result args to the next step. Useful as an adapter for pre-made functions that take no error as an argument.
 
 ##### F.onResultExit(err, results..., cb)
 This helper _step_ function will exit the sequence if it is fed a non-null result (or a map containing a non-null result). In all other cases it will forward the received err and (null-ish) result to the next step.
 
+##### F.ifFalseExit(err, check, [args...], cb)
+This helper _step_ function will exit the sequence if it is fed either a non-null error or a falsy check value. In all other cases it will forward _only_ the remaining args to the next step.
+
 #### Generators
 
 ##### F.result( func | value )
-Given a function, this helper generates a step that executes the function _synchronously_ (called with the received parameters) then passes to the next step a null error and the given sync. result.  
+Given a function, this helper generates a _step_ that executes the function _synchronously_ (called with the received parameters) then passes to the next step
+* if the execution completes: a null error and the given sync. result
+* if the execution throws: the catched exception as error and a null result
 
 ```javascript
     
@@ -304,7 +312,7 @@ Given a function, this helper generates a step that executes the function _synch
         F.result(syncFunc)
     );
 
-    mySeq(null, console.log);
+    mySeq( null, console.log );
 
     // -> null 42 
 
@@ -313,7 +321,7 @@ Given a function, this helper generates a step that executes the function _synch
 If a constant value is given instead of a function, that value is passed to next as the step result.
 
 ##### F.set( object )
-Given an object, this helper generates a step that sets on the sequence state all the properties of the object and transparently passes all received argument to the following step.
+Given an object, this helper generates a _step_ that sets on the sequence state all the properties of the object and transparently passes all received argument to the following step.
 
 ```javascript
     
@@ -324,7 +332,7 @@ Given an object, this helper generates a step that sets on the sequence state al
         F.set({foo:'baz', bar:42})
     )
 
-    mySeq('input',function(err,result){
+    mySeq( 'input', function(err,result){
         console.log(err,result,this.foo,this.bar);
     });
 
@@ -332,7 +340,7 @@ Given an object, this helper generates a step that sets on the sequence state al
 ```
 
 ##### F.map( func )
-Given an (async) function, this helper generates a step that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as the parallel key.
+Given an (async) function, this helper generates a _step_ that iterates over all the properties of the _first argument received_, calling `func` on each value in parallel, with the property name as the parallel key.
 
 ```javascript
     
@@ -346,36 +354,128 @@ Given an (async) function, this helper generates a step that iterates over all t
             }
             next(err,sizes);
         }
-    )
+    );
 
     mySeq({
         'first file':'existing_file.js', 
         'second file':'not_existing_file.js',
-    },console.log);
+    }, console.log );
 
     // -> (e.g.) { 'second file': { [Error: ENOENT, open 'not_existing_file.js'] errno: 34, code: 'ENOENT', path: 'not_existing_file.js' } } { 'first file': 663 }
 ```
 
 ##### F.parallel( {key1:func1, ...} | [[func1, ...]] )
-Given a map or array of functions, this helper generates a step that executes all of them in parallel with the input arguments received. The function map keys or array indexes are used as parallel execution keys.
+Given a map or array of functions, this helper generates a _step_ that executes all of them in parallel with the input arguments received. The function map keys or array indexes are used as parallel execution keys.
+
+```javascript
+    
+    var sum_f     = function(a,b,cb){ cb(null, a+b); };
+    var product_f = function(a,b,cb){ cb(null, a*b); };
+
+    var mySeq = F(
+        F.parallel({ s: sum_f, p: product_f })
+    );
+
+    mySeq( 4, 2, console.log);
+
+    // -> {} { s: 6, p: 8 }
+
+    /*
+    basically equivalent to:
+    var mySeq = F(
+        function(a,b,next){
+            sum_f(     a, b, next.push('s') );
+            product_f( a, b, next.push('p') );
+        }
+    );
+    */
+
+```
+
+Exactly as in the handwritten form, using a function map with only numeric keys ( or an array ) results in _queued_ parallelization, with the results being passed to next step as distinct arguments:
+
+```javascript
+    
+    var mySeq = F(
+        F.parallel( [ sum_f, product_f ] )
+    );
+
+    mySeq( 4, 2, console.log);
+
+    // -> {} 6 8
+
+```
 
 ##### F.parallelArgs( [func1], [func2], ... )
-Given n (async) functions, this helper generates a step that applies each function in order to the received arguments. Undefined places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
+Given n (async) functions, this helper generates a _step_ that applies each function in order to the received arguments. Undefined/null places are skipped, and thus the corresponding argument discarded. The parallel execution is of the "queued" kind.
+
+```javascript
+    
+    var double_f  = function(a,cb){ cb(null, 2*a); };
+    var triple_f  = function(a,cb){ cb(null, 3*a); };
+
+    var mySeq = F(
+        F.parallelArgs(triple_f,null,double_f)
+    );
+
+    mySeq( 1, 2, 42, console.log);
+
+    // -> {} 3 84 
+
+```
 
 ##### F.if( checkFunc, func )
-Given an (async) check function returning a boolean and an (async) function, this helper generates a sequence that calls `func` with the given sequence arguments only if the checkFunc returns a truthy result.
+Given an (async) check function returning a boolean and an (async) function, this helper generates a _sequence_ that calls `func` with the given sequence arguments only if the checkFunc returns a truthy result. In case of a falsy check the sequence ends with neither error nor result.
+
+```javascript
+
+    var lessThanFortytwo = function(input, next){
+        next( null, (input < 42) );
+    };
+
+    var doubleIt = function(input,next){
+        next( null, 2*input);
+    };
+
+    var finalCb = function(err,result){
+
+        if(err)
+            console.log('Error: '+err);
+        else
+            console.log('Result: '+result);
+    };
+
+    myseq = F(
+        F.if(lessThanFortytwo, doubleIt),
+        F.onResultExit,
+        'bigger than 41'
+    );
+
+    myseq( 3, finalCb );
+    // -> 'Result: 6'
+
+    myseq( 50, finalCb );
+    // -> 'Result: bigger than 41'
+
+```
 
 ##### F.while( checkFunc, loopFunc )
-Given an (async) check function returning a boolean and an (async) loop function, this helper generates a sequence that:
+Given an (async) check function returning a boolean and an (async) loop function, this helper generates a _sequence_ that:
 
-1. each time the check function returns true, executes the looped function
-2. when the check function return false or error, the sequence is exited. The final callback is called with the error, if any, and the _sequence state_ as result
+1. each time the check function returns true, executes the looped function. When the check function return false or error, the sequence is exited.
+2. if the looped function forwards an error, the sequence is exited. Otherway, the result of the looped function is ignored and the sequence loops back to the chek step.
+3. the final callback is called with an error, if any, and as usually bound to the sequence state.
 
 Note that the input fed to the sequence is passed as arguments to both the check function and the looped function. The looped function is supposed to change the _state_ of execution or an external resource so that eventaully the check function returns false and the sequence ends.
+
+If the execution of the looped function needs to provide a result, it can also be stored in the sequence state, available as context to the final callback.
 
 ```javascript
 
     var lessThanCount = function(input, next){
+        if(typeof input.maxCount !== 'number' || input.maxCount<0)
+            next('invalid input.maxCount'); //immediatly call next with error, triggers exit
+
         // we e.g. check the execution state against an initial input parameter
         var check = !( (this.loopCount || 0) >= input.maxCount );
 
@@ -390,18 +490,22 @@ Note that the input fed to the sequence is passed as arguments to both the check
         delayed(5)(next); //call next() after 5 ms
     };
 
-    var finalCb = function(err,finalState){
+    var finalCb = function(err){
         if(err)
             console.log('Error: '+err);
         else
-            console.log('Result: '+finalState.output);
+            console.log('Result: '+this.output);
     };
 
-    F.while(lessThanCount, myLoopedFunc)( {maxCount:3}, finalCb );
 
+    F.while(lessThanCount, myLoopedFunc)( {maxCount:'baz'}, finalCb );
+    // -> 'Error: invalid input.maxCount'
+
+    F.while(lessThanCount, myLoopedFunc)( {maxCount:3}, finalCb );
     // -> 'Result: foofoofoo'
 
 ```
+
 ### Augmentations
 
 TODO: documentation (see F' code and tests for examples)
