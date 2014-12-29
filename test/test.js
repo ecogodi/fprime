@@ -290,7 +290,7 @@ describe('F -> ', function(){
 
     });
     
-    describe('"result" helper tests -> ', function(){
+    describe('"result" generator helper tests -> ', function(){
         it('constant value', function(done){
             F(F.result('myresult'),F.onErrorExit,a)('start',function(err,result){
                 done();
@@ -323,7 +323,7 @@ describe('F -> ', function(){
 
     });
 
-    describe('"set" helper tests -> ', function(){
+    describe('"set" generator helper tests -> ', function(){
         it('set a state', function(done){
             F(F.set({foo:'baz', bar:42}),a)('start',function(err,result){
                 done();
@@ -337,7 +337,7 @@ describe('F -> ', function(){
     });
 
 
-    describe('"exit" helper tests -> ', function(){
+    describe('exit tests -> ', function(){
         it('sequence with exit on error (exit)', function(done){
             F(a,x,e,b)('please_err',function(err,result){
                 done();
@@ -350,7 +350,7 @@ describe('F -> ', function(){
             F(a,re,b)('input',function(err,result){
                 done();
                 assert.notOk(err,'no error');
-                assert.equal(result,'input-a', 'expected result');  
+                assert.equal(result,'input-a', 'expected result');
             });
         });
 
@@ -358,12 +358,36 @@ describe('F -> ', function(){
             F(a,re,b)('please_err',function(err,result){
                 done();
                 assert.notOk(err,'no error');
-                assert.equal(result,'undefined-b', 'expected result');  
+                assert.equal(result,'undefined-b', 'expected result');
+            });
+        });
+
+        it('sequence with exit on false (no exit)', function(done){
+            F(function(next){next(null,true,'foo')}, F.ifFalseExit, a)(function(err,result){
+                done();
+                assert.notOk(err,'no error');
+                assert.equal(result, 'foo-a', 'expected result');
+            });
+        });
+
+        it('sequence with exit on false (exit)', function(done){
+            F(function(next){next(null,false,'foo')}, F.ifFalseExit, a)(function(err,result){
+                done();
+                assert.notOk(err, 'no error');
+                assert.notOk(result, 'no result');
+            });
+        });
+
+        it('sequence with exit on false (error)', function(done){
+            F(function(next){next('foo error')}, F.ifFalseExit, a)(function(err,result){
+                done();
+                assert.equal(err, 'foo error', 'no error');
+                assert.notOk(result, 'no result');
             });
         });
     });
     
-    describe('"onErrorExit" helper tests -> ', function(){
+    describe('parallel "onErrorExit" step helper tests -> ', function(){
         it('parallel error exit', function(done){
             F(pe,
                 e,c
@@ -404,7 +428,7 @@ describe('F -> ', function(){
         });
     });
 
-    describe('"if" helper tests -> ', function(){
+    describe('"if" generator helper tests -> ', function(){
 
         var checkTrue = function(input, next){
             utils.delayedResult(5)(true,next);
@@ -420,7 +444,7 @@ describe('F -> ', function(){
             F.if(false, a)('start',function(err,result){
                 done();
                 assert.notOk(err,'no error');
-                assert.ok(result,'state');
+                assert.notOk(result,'no result');
             });
         });
 
@@ -444,7 +468,7 @@ describe('F -> ', function(){
             F.if(checkFalse, a)('start',function(err,result){
                 done();
                 assert.notOk(err,'no error');
-                assert.ok(result,'state');
+                assert.notOk(result,'no result');
             });
         });
 
@@ -473,31 +497,31 @@ describe('F -> ', function(){
         };
 
         it('test of a "while" helper (0)', function(done){
-            F.while(lessThanCount, myLoopedFunc)({maxCount:0},function(err,state){
+            F.while(lessThanCount, myLoopedFunc)({maxCount:0},function(err){
                 done();
-                assert.isUndefined(state.loopCount);
-                assert.isUndefined(state.output);
+                assert.isUndefined(this.loopCount);
+                assert.isUndefined(this.output);
             });
         });
 
         it('test of a "while" helper (3)', function(done){
-            F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err,state){
+            F.while(lessThanCount, myLoopedFunc)({maxCount:3},function(err){
                 done();
-                assert.equal(state.loopCount,3, 'expected result');
-                assert.equal(state.output,'foofoofoo', 'expected result');  
+                assert.equal(this.loopCount,3, 'expected result');
+                assert.equal(this.output,'foofoofoo', 'expected result');  
             });
         });
 
         it('test of a "while" helper (7)', function(done){
-            F.while(lessThanCount, myLoopedFunc)({maxCount:7},function(err,state){
+            F.while(lessThanCount, myLoopedFunc)({maxCount:7},function(err){
                 done();
-                assert.equal(state.loopCount,7, 'expected result');
-                assert.equal(state.output,'foofoofoofoofoofoofoo', 'expected result');
+                assert.equal(this.loopCount,7, 'expected result');
+                assert.equal(this.output,'foofoofoofoofoofoofoo', 'expected result');
             });
         });
 
         it('test of a "while" helper (error in check)', function(done){
-            F.while(checkErr, myLoopedFunc)({maxCount:7},function(err,result){
+            F.while(checkErr, myLoopedFunc)({maxCount:7},function(err, result){
                 done();
                 assert.equal(err,'error_message');
                 assert.notOk(result,'no result');

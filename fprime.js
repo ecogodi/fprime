@@ -48,12 +48,17 @@
             this.F.exit.apply(this,[err].concat(args));
     };
 
-    F.ifFalseExit = function(err,bool,next){
+    F.ifFalseExit = function(){
+        var args  = Array.prototype.slice.call(arguments);
+        var err   = args.shift();
+        var check = args.shift();
+        var next  = args.pop();
+
         if(err)
             return this.F.exit(err);
-        if(!bool)
-            return this.F.exit(null,this);
-        next();
+        if(!check)
+            return this.F.exit();
+        next.apply(this,args);
     }
 
     // ----------------------------------------------
@@ -107,13 +112,15 @@
         }
         // user-provided looped function
         // f(input,next) -> (err,next)
-        // 
-        var loop = function(err,next){
+        //
+        // F.onErrorExit
+        //  
+        var loop = function(next){
             this.F.rewind();
             next();
         }
 
-        return F(saveInput,check,F.ifFalseExit,retrieveInput,f,loop).bind(this);
+        return F(saveInput,check,F.ifFalseExit,retrieveInput,f,F.onErrorExit,loop).bind(this);
     };
 
 
@@ -164,11 +171,12 @@
         return function(){
             var args = Array.prototype.slice.call(arguments),
                 next = args.pop();
+
             for(var p in parallelSteps){
-                var f;
+                var f = null;
                 if(typeof parallelSteps[p] === 'function')
                     f = parallelSteps[p];
-                else if(parallelSteps[p]!==undefined)
+                else if(parallelSteps[p] !== undefined && parallelSteps[p] !== null)
                     f = F(parallelSteps[p]);
                 if(f)
                     f.bind(this)( args[p], next.push() );
@@ -180,16 +188,17 @@
         return function(){
             var args = Array.prototype.slice.call(arguments),
                 next = args.pop();
+
             for(var p in parallelSteps){
                 if(!isNaN(p))
                     nk = parseInt(p,10);
                 else
                     nk = p;
 
-                var f;
+                var f = null;
                 if(typeof parallelSteps[p] === 'function')
                     f = parallelSteps[p];
-                else if(parallelSteps[p]!==undefined)
+                else if(parallelSteps[p] !== undefined && parallelSteps[p] !== null)
                     f = F(parallelSteps[p]);
                 if(f)
                     f.apply( this, args.concat(next.push(nk)) );
