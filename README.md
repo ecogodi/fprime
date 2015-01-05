@@ -254,7 +254,8 @@ This notation makes use of the [`F.parallelArgs` helper][fparallelargs], see lat
     
     // a non-function step of given value is replaced by `next(null, value)`
 ```
-This notation makes use of the [`F.result` helper][fresult], see later. Nota bene: this notation by default has a lower priority than the map/array ones.
+This notation makes use of the [`F.result` helper][fresult], see later. 
+Nota bene: this notation by default has a lower priority than the map/array ones, thus a step such as `{a:1,b:2}` will be interpreted as a parallel of two value steps, rather than an array value.
 
 #### Composition
 Compact notations _can_ be nested:
@@ -326,14 +327,13 @@ Given an object, this helper generates a _step_ that sets on the sequence state 
 ```javascript
     
     var mySeq = F(
-        function(string,next){
-            next(null, 'processed ' + string);
-        },
-        F.set({foo:'baz', bar:42})
+        F.set({ bar:1 }),
+        function(string,next){ next(null, 'processed ' + string); },
+        F.set({ foo:'baz', bar:42 })
     )
 
     mySeq( 'input', function(err,result){
-        console.log(err,result,this.foo,this.bar);
+        console.log( err, result, this.foo, this.bar );
     });
 
     // -> null 'processed input' 'baz' 42
@@ -438,7 +438,6 @@ Given an (async) check function returning a boolean and an (async) function, thi
     };
 
     var finalCb = function(err,result){
-
         if(err)
             console.log('Error: '+err);
         else
@@ -507,8 +506,78 @@ If the execution of the looped function needs to provide a result, it can also b
 ```
 
 ### Augmentations
+Extension of core **F** can come in different forms:
 
-TODO: documentation (see F' code and tests for examples)
+1. define utility step functions aimed at common code reuse
+2. register _augmentations_ to work through exposed _hooks_
+
+**F'** actually does both: step and factory helpers (e.g `onErrorExit` or `while`) are simply utility functions that are attached to the **F** object, whereas shorthand notations are registered as augmentations of `stepFilter` type (see later). 
+
+Augmentations are defined as objects of the form:
+```javascript
+
+    { 
+        type: <string>,
+        name: <string>,
+        f:  <function>,
+        [options: <object>]
+    }
+
+```
+...and registered by calling `F.augment`, passing either a single augmentation or an array of.
+
+#### type: stateF
+The function defined in a `stateF` augmentation will be available (with the given augmentation name) in the execution state of any sequence under the `this.F` namespace, sibling to the predefined `exit` and `rewind` functions.
+These functions will be bound to a subset of the "current run" private methods (`exit`, `rewind`, `setNextStep`, `runOneStep`; see code for further details).
+
+```javascript
+    // define an augmentation that allows jumping to any step in a sequence
+    var jumpAugment = {
+        type: 'stateF',
+        name: 'jumpWithArgs',
+        f: function(n,array){
+            this.setNextStepId(n+1);  //set the next execution step to be the n+1-th
+            this.runOneStep(n,array); //run the n-th execution steps with the given array of args
+        }
+    };
+
+    F.augment(jumpAugment);
+
+    var j5 = function(input,next){
+        this.F.jumpWithArgs(5, [input+'->jump']);
+    };
+
+    var add = function(str){ return function(input,next){next( null, input+'->'+str )} };
+    var e = F.onErrorExit;
+
+    F(add('a'),e,j5,add('b'),e,add('c'),e,add('d'))( 'start', console.log );
+
+    // -> null 'start->a->jump->c->d'
+```
+
+This type supports no options.
+
+#### type: stepFilter
+The function defined in a `stepFilter` augmentation will act as a _filter function_ taking in a step object (as passed to the **F** sequence) and returning a new step object that replaces it.
+All registered `stepFilter` augmentations will be run on every step, in the order dictated by the `options.order` value.
+
+For example **F'** implements "value steps" by registering the augmentation:
+
+```javascript
+    {
+        name: 'shorthand_value',
+        type: 'stepFilter',
+        f: function(step){
+            if(typeof step !== 'function'){
+                var value = step;
+                step = F.result(value);
+            }
+            return step;
+        },
+        options: {order: 99}
+    }
+```
+
 
 -------------------------------------------------------------------------
 
