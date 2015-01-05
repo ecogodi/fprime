@@ -284,7 +284,7 @@ You might have noticed that the main entry point for the package is not the core
 **F'** decorates the core F with extra utility features. This is actually the suggested main way to use **F**: enrich it with the helpers and augmentations you need.
 
 ### Helpers
-Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _generator helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences. 
+Helpers are functions attached to the main exported function and broadly come in two categories: _step helpers_ and _factory helpers_. The former can be slotted in any sequence to provide some standard behaviour. The latter are functions that generate steps/sequences. 
 
 #### Steps
 
@@ -297,7 +297,7 @@ This helper _step_ function will exit the sequence if it is fed a non-null resul
 ##### F.ifFalseExit(err, check, [args...], cb)
 This helper _step_ function will exit the sequence if it is fed either a non-null error or a falsy check value. In all other cases it will forward _only_ the remaining args to the next step.
 
-#### Generators
+#### Factories
 
 ##### F.result( func | value )
 Given a function, this helper generates a _step_ that executes the function _synchronously_ (called with the received parameters) then passes to the next step

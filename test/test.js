@@ -290,7 +290,7 @@ describe('F -> ', function(){
 
     });
     
-    describe('"result" generator helper tests -> ', function(){
+    describe('"result" factory helper tests -> ', function(){
         it('constant value', function(done){
             F(F.result('myresult'),F.onErrorExit,a)('start',function(err,result){
                 done();
@@ -323,7 +323,7 @@ describe('F -> ', function(){
 
     });
 
-    describe('"set" generator helper tests -> ', function(){
+    describe('"set" factory helper tests -> ', function(){
         it('set a state', function(done){
             F(F.set({foo:'baz', bar:42}),a)('start',function(err,result){
                 done();
@@ -428,7 +428,7 @@ describe('F -> ', function(){
         });
     });
 
-    describe('"if" generator helper tests -> ', function(){
+    describe('"if" factory helper tests -> ', function(){
 
         var checkTrue = function(input, next){
             utils.delayedResult(5)(true,next);
